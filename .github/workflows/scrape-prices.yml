@@ -13,7 +13,11 @@ jobs:
   scrape:
     runs-on: ubuntu-latest
     env:
-      DATABASE_URL: "file:./prisma/dev.db"
+      # Prisma's SQLite connector resolves a relative `file:` URL against the
+      # schema.prisma directory (prisma/), not the process cwd — so this must
+      # be "./dev.db", not "./prisma/dev.db", or every write silently lands
+      # in a throwaway prisma/prisma/dev.db that never gets committed.
+      DATABASE_URL: "file:./dev.db"
     steps:
       - uses: actions/checkout@v4
 
