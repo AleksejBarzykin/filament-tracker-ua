@@ -21,17 +21,20 @@ export function createSchemaMicrodataAdapter(opts: {
   meta: ShopMeta;
   categories: CategoryTarget[];
   fallbackBrand: string;
+  paginate?: (base: string, page: number) => string;
 }): ShopAdapter {
   return {
     key: opts.key,
     meta: opts.meta,
     categories: opts.categories,
-    paginate: (base, page) => {
-      if (page <= 1) return base;
-      const url = new URL(base);
-      url.searchParams.set("page", String(page));
-      return url.toString();
-    },
+    paginate:
+      opts.paginate ??
+      ((base, page) => {
+        if (page <= 1) return base;
+        const url = new URL(base);
+        url.searchParams.set("page", String(page));
+        return url.toString();
+      }),
     parseCategoryPage: (html, pageUrl) => {
       const $ = cheerio.load(html);
       const listings: RawListing[] = [];

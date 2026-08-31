@@ -74,7 +74,10 @@ export const shopAdapters: ShopAdapter[] = [
       deliveryUa: true,
     },
     fallbackBrand: "UKR3D",
-    categories: [{ url: "https://ukr3d.com.ua/g145752746-plastik-petg/", maxPages: 3 }],
+    // Реальна схема пагінації (з логів CI): не query-параметр, а шлях-сегмент
+    // `filter/page=N/`, характерний для Prom.ua.
+    paginate: (base, page) => (page <= 1 ? base : `${base.replace(/\/$/, "")}/filter/page=${page}/`),
+    categories: [{ url: "https://ukr3d.com.ua/g145752746-plastik-petg/", maxPages: 8 }],
   }),
   // Підтверджено реальним HTML з логів CI: картка `.goods-card` несе GA4
   // ecommerce data-атрибути (data-name/data-price/data-brand) прямо на собі.
@@ -88,7 +91,10 @@ export const shopAdapters: ShopAdapter[] = [
       deliveryUa: true,
     },
     fallbackBrand: "ArtLine",
-    categories: [{ url: "https://artline.ua/catalog/filamenty-i-smoly/", maxPages: 4 }],
+    // Реальна схема пагінації (з логів CI): шлях-сегмент `page=N` без "?",
+    // без слеша в кінці — `?page=N` сайт просто ігнорує й віддає 1-шу сторінку.
+    paginate: (base, page) => (page <= 1 ? base : `${base}page=${page}`),
+    categories: [{ url: "https://artline.ua/catalog/filamenty-i-smoly/", maxPages: 8 }],
   }),
   // Brain повертає HTTP 403 навіть із браузерним User-Agent при простому
   // fetch (повноцінний WAF) — рендеримо headless-браузером. Підтверджено
@@ -103,8 +109,14 @@ export const shopAdapters: ShopAdapter[] = [
       deliveryKyiv: true,
       deliveryUa: true,
     },
+    // Реальна схема пагінації (з логів CI): шлях-сегмент `page=N/` у кінці —
+    // сайт сам пропонує посилання на іншу канонічну категорію без фільтра
+    // (Plastik_dlya_3D-printeriv-c684, до 84 сторінок — це набагато ширша,
+    // непрофільна категорія), тож пагінуємо в межах ТІЄЇ Ж відфільтрованої
+    // URL, просто додаючи page=N/, а не переходимо на чужу категорію.
+    paginate: (base, page) => (page <= 1 ? base : `${base.replace(/\/$/, "")}/page=${page}/`),
     categories: [
-      { url: "https://brain.com.ua/category/Rashodniki_k_3D_pechati-c1804/filter=a1804-684/", maxPages: 5 },
+      { url: "https://brain.com.ua/category/Rashodniki_k_3D_pechati-c1804/filter=a1804-684/", maxPages: 10 },
     ],
   }),
   // Те саме для Rozetka — HTTP 403 на простий fetch.
@@ -119,8 +131,11 @@ export const shopAdapters: ShopAdapter[] = [
         deliveryUa: true,
       },
       fallbackBrand: "Rozetka",
+      // Реальна схема пагінації (з логів CI): шлях-сегмент `page=N/`, не
+      // query-параметр — `?page=N` сайт ігнорує й віддає 1-шу сторінку.
+      paginate: (base, page) => (page <= 1 ? base : `${base.replace(/\/$/, "")}/page=${page}/`),
       categories: [
-        { url: "https://rozetka.com.ua/ua/rashodnie-materiali-dlya-3d-printerov/c4671751/", maxPages: 3 },
+        { url: "https://rozetka.com.ua/ua/rashodnie-materiali-dlya-3d-printerov/c4671751/", maxPages: 8 },
       ],
     }),
     fetchPage: browserFetchHtml,
