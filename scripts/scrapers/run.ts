@@ -61,6 +61,26 @@ function logHtmlDebug(url: string, html: string) {
   }
 }
 
+function setsEqual<T>(a: Set<T>, b: Set<T>): boolean {
+  if (a.size !== b.size) return false;
+  for (const v of a) if (!b.has(v)) return false;
+  return true;
+}
+
+/**
+ * Друкує реальні посилання на пагінацію зі сторінки — щоб підібрати
+ * правильну URL-схему замість навмання (`?page=N` не завжди те, що сайт
+ * насправді очікує: буває шлях-сегмент, `;page=N`, окремий query-параметр
+ * тощо).
+ */
+function logPaginationLinks(url: string, html: string) {
+  const hrefMatches = [...html.matchAll(/href="([^"]*)"/gi)]
+    .map((m) => m[1])
+    .filter((h) => /page/i.test(h));
+  const unique = [...new Set(hrefMatches)].slice(0, 15);
+  console.log(`  [debug] pagination-like hrefs on ${url}:\n    ${unique.join("\n    ")}`);
+}
+
 async function findOrCreateFilament(raw: RawListing) {
   const material = normalizeMaterial(raw.material);
   const brand = raw.brand.trim();
@@ -139,6 +159,7 @@ async function main() {
 
     for (const category of adapter.categories) {
       const maxPages = category.maxPages ?? 1;
+      let prevUrls: Set<string> | null = null;
       for (let page = 1; page <= maxPages; page++) {
         const url = adapter.paginate(category.url, page);
         const html = await (adapter.fetchPage ?? fetchHtml)(url);
@@ -153,6 +174,22 @@ async function main() {
           if (page === 1) logHtmlDebug(url, html);
           break; // конец пагинації або зламані селектори
         }
+
+        // Якщо друга й наступні сторінки повертають той самий набір
+        // productUrl, що й перша — значить URL-схема пагінації неправильна
+        // (сайт просто ігнорує параметр і завжди віддає першу сторінку).
+        // Друкуємо реальні посилання на пагінацію зі сторінки, щоб підібрати
+        // правильну схему замість навмання.
+        const currentUrls = new Set(listings.map((l) => l.productUrl));
+        if (page > 1 && prevUrls && setsEqual(currentUrls, prevUrls)) {
+          console.warn(`  [debug] page ${page} returned the SAME listings as the previous page — pagination is broken`);
+          logPaginationLinks(url, html);
+          break;
+        }
+        if (page === 1 && maxPages > 1) {
+          logPaginationLinks(url, html);
+        }
+        prevUrls = currentUrls;
 
         for (const raw of listings) {
           try {
