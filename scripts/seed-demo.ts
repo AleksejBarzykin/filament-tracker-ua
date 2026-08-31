@@ -24,14 +24,62 @@ const shops = [
   { slug: "olx", name: "OLX", url: "https://www.olx.ua", scraperKey: "olx" },
 ] as const;
 
+type ShopSlug = (typeof shops)[number]["slug"];
+
 type SeedFilament = {
   brand: string;
   material: string;
   color: string;
   diameterMm: number;
   weightG: number;
-  offers: { shop: (typeof shops)[number]["slug"]; price: number; oldPrice?: number; inStock?: boolean }[];
+  offers: { shop: ShopSlug; price: number; oldPrice?: number; inStock?: boolean; url?: string }[];
 };
+
+/**
+ * Реальні (перевірені через веб-пошук) сторінки магазинів — використовуються
+ * як посилання "До магазину", коли для конкретної пропозиції не задано
+ * точний `url` товару. Це демо-дані (ціни синтетичні), але посилання ведуть
+ * на справжні існуючі сторінки замість вигаданого `/product/demo-...`.
+ */
+const SHOP_FALLBACK_URL: Record<ShopSlug, string> = {
+  plexiwire: "https://shop.plexiwire.com.ua/pla-filament/",
+  "3dplastic": "https://www.3dplastic.com.ua/",
+  "filament-shop": "https://filament-shop.in.ua/",
+  ukr3d: "https://ukr3d.com.ua/",
+  artline: "https://artline.ua/catalog/filamenty-i-smoly/",
+  brain: "https://brain.com.ua/category/Rashodniki_k_3D_pechati-c1804/filter=a1804-684/",
+  rozetka: "https://rozetka.com.ua/ua/rashodnie-materiali-dlya-3d-printerov/c4671751/",
+  olx: "https://www.olx.ua/uk/elektronika/kompyutery-i-komplektuyuschie/q-%D0%BF%D0%BB%D0%B0%D1%81%D1%82%D0%B8%D0%BA-%D0%B4%D0%BB%D1%8F-3%D0%B4-%D0%BF%D1%80%D0%B8%D0%BD%D1%82%D0%B5%D1%80%D0%B0/",
+};
+
+/** Реальні категорійні сторінки для конкретного магазину+матеріалу, точніші за загальний fallback. */
+const SHOP_MATERIAL_URL: Partial<Record<ShopSlug, Partial<Record<string, string>>>> = {
+  plexiwire: {
+    PLA: "https://shop.plexiwire.com.ua/pla-filament/",
+    PETG: "https://shop.plexiwire.com.ua/petg-filament/",
+    ABS: "https://shop.plexiwire.com.ua/abs-filament/",
+    ASA: "https://shop.plexiwire.com.ua/asa-filament/",
+  },
+  ukr3d: {
+    PLA: "https://ukr3d.com.ua/ua/g145708343-pla-plastik-dlya",
+    PETG: "https://ukr3d.com.ua/g145752746-plastik-petg/",
+  },
+  rozetka: {
+    PLA: "https://rozetka.com.ua/ua/rashodnie-materiali-dlya-3d-printerov/c4671751/vid-plastika-dlya-3d-printera=pla/",
+    PETG: "https://rozetka.com.ua/ua/rashodnie-materiali-dlya-3d-printerov/c4671751/vid-plastika-dlya-3d-printera=copet-petg/",
+    ASA: "https://rozetka.com.ua/rashodnie-materiali-dlya-3d-printerov/c4671751/vid-plastika-dlya-3d-printera=asa/",
+    TPU: "https://rozetka.com.ua/ua/rashodnie-materiali-dlya-3d-printerov/c4671751/vid-plastika-dlya-3d-printera=tpu/",
+  },
+};
+
+function resolveProductUrl(shop: ShopSlug, material: string, filamentId: string, explicitUrl?: string): string {
+  if (explicitUrl) return explicitUrl;
+  const fallback = SHOP_MATERIAL_URL[shop]?.[material] ?? SHOP_FALLBACK_URL[shop];
+  // Кілька демо-позицій одного магазину можуть ділити той самий fallback URL
+  // категорії — унікалізуємо якорем (#), який не змінює сторінку, на яку
+  // веде посилання, але зберігає unique(shopId, productUrl) у БД.
+  return `${fallback}#${filamentId}`;
+}
 
 const filaments: SeedFilament[] = [
   {
@@ -153,7 +201,11 @@ const filaments: SeedFilament[] = [
     diameterMm: 1.75,
     weightG: 1000,
     offers: [
-      { shop: "brain", price: 479 },
+      {
+        shop: "brain",
+        price: 479,
+        url: "https://brain.com.ua/ukr/Plastik_dlya_3D-printera_Creality_PLA_1kg_175mm_orange_3301010307-p1119797.html",
+      },
       { shop: "rozetka", price: 499, oldPrice: 549 },
     ],
   },
@@ -174,7 +226,14 @@ const filaments: SeedFilament[] = [
     color: "Білий",
     diameterMm: 1.75,
     weightG: 1000,
-    offers: [{ shop: "rozetka", price: 899, oldPrice: 999 }],
+    offers: [
+      {
+        shop: "rozetka",
+        price: 899,
+        oldPrice: 999,
+        url: "https://rozetka.com.ua/ua/rashodnie-materiali-dlya-3d-printerov/c4671751/producer=bambu-lab/",
+      },
+    ],
   },
   {
     brand: "Elegoo",
@@ -191,7 +250,11 @@ const filaments: SeedFilament[] = [
     diameterMm: 1.75,
     weightG: 1000,
     offers: [
-      { shop: "olx", price: 399 },
+      {
+        shop: "olx",
+        price: 399,
+        url: "https://www.olx.ua/d/uk/obyavlenie/pla-plastik-flament-dlya-3d-printera-kingroon-pla-chorniy-IDUhP4b.html",
+      },
       { shop: "brain", price: 445 },
     ],
   },
@@ -202,7 +265,12 @@ const filaments: SeedFilament[] = [
     diameterMm: 1.75,
     weightG: 1000,
     offers: [
-      { shop: "olx", price: 350, oldPrice: 420 },
+      {
+        shop: "olx",
+        price: 350,
+        oldPrice: 420,
+        url: "https://www.olx.ua/d/uk/obyavlenie/plastik-flament-3d-printera-sunlu-petg-1-75-mm-1-kg-belyy-filament-IDThoqH.html",
+      },
       { shop: "ukr3d", price: 399 },
     ],
   },
@@ -249,14 +317,25 @@ async function main() {
 
     for (const offer of f.offers) {
       const shopId = shopIdBySlug.get(offer.shop)!;
-      const productUrl = `${shops.find((s) => s.slug === offer.shop)!.url}/product/demo-${filament.id}`;
+      const productUrl = resolveProductUrl(offer.shop, f.material, filament.id, offer.url);
       const discountPct =
         offer.oldPrice && offer.oldPrice > offer.price
           ? Math.round(((offer.oldPrice - offer.price) / offer.oldPrice) * 100)
           : null;
 
-      const listing = await prisma.listing.create({
-        data: {
+      // Кілька демо-позицій одного магазину можуть ділити той самий
+      // fallback URL категорії (коли для товару не задано точний `url`) —
+      // upsert замість create, щоб не впасти на unique(shopId, productUrl).
+      const listing = await prisma.listing.upsert({
+        where: { shopId_productUrl: { shopId, productUrl } },
+        update: {
+          filamentId: filament.id,
+          currentPrice: offer.price,
+          oldPrice: offer.oldPrice ?? null,
+          inStock: offer.inStock ?? true,
+          discountPct,
+        },
+        create: {
           shopId,
           filamentId: filament.id,
           productUrl,

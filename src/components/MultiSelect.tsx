@@ -33,10 +33,10 @@ export default function MultiSelect({
 
   const summary =
     selected.length === 0
-      ? `Усі (${options.length})`
+      ? "Усі"
       : selected.length === 1
         ? optionLabels?.[selected[0]] ?? selected[0]
-        : `Обрано: ${selected.length}`;
+        : selected.map((v) => optionLabels?.[v] ?? v).join(", ");
 
   return (
     <div ref={ref} className="relative flex flex-col gap-1">
@@ -51,7 +51,7 @@ export default function MultiSelect({
       </button>
 
       {open && (
-        <div className="absolute top-full left-0 z-20 mt-1 max-h-64 w-56 overflow-y-auto scrollbar-thin rounded-md border border-line bg-surface-2 p-1 shadow-xl">
+        <div className="absolute top-full left-0 z-30 mt-1 max-h-64 w-56 overflow-y-auto scrollbar-thin rounded-md border border-line bg-surface-2 p-1 shadow-2xl">
           {selected.length > 0 && (
             <button
               type="button"
