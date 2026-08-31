@@ -132,7 +132,7 @@ async function main() {
       const maxPages = category.maxPages ?? 1;
       for (let page = 1; page <= maxPages; page++) {
         const url = adapter.paginate(category.url, page);
-        const html = await fetchHtml(url);
+        const html = await (adapter.fetchPage ?? fetchHtml)(url);
         if (!html) {
           console.warn(`  [skip] failed to fetch ${url}`);
           break;

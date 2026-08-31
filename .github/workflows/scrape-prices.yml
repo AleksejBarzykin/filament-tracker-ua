@@ -24,6 +24,9 @@ jobs:
 
       - run: npm ci
 
+      - name: Install Playwright Chromium (для Brain/Rozetka, блокують простий fetch)
+        run: npx playwright install --with-deps chromium
+
       - name: Apply schema
         run: npx prisma db push
 

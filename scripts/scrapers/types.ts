@@ -34,4 +34,11 @@ export interface ShopAdapter {
   paginate: (base: string, page: number) => string;
   /** Парсит HTML страницы категории/каталога в список позиций. */
   parseCategoryPage: (html: string, pageUrl: string) => RawListing[];
+  /**
+   * Опційний кастомний спосіб отримати HTML сторінки (за замовчуванням —
+   * простий HTTP fetch у run.ts). Магазини з WAF/anti-bot, які блокують
+   * звичайний fetch (Brain, Rozetka — HTTP 403 навіть із браузерним
+   * User-Agent), підставляють сюди headless-браузер (browser-fetch.ts).
+   */
+  fetchPage?: (url: string) => Promise<string | null>;
 }

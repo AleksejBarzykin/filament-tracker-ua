@@ -4,6 +4,7 @@ import { createSchemaMicrodataAdapter } from "./schema-microdata-generic";
 import { createReelCardAdapter } from "./reel-card-generic";
 import { createDataAttrCardAdapter } from "./data-attr-card-generic";
 import { createCatalogCardAdapter } from "./catalog-card-generic";
+import { browserFetchHtml } from "../browser-fetch";
 
 /**
  * Реестр адаптеров магазинов и площадок. Категории/URL ниже свёрены с
@@ -88,34 +89,43 @@ export const shopAdapters: ShopAdapter[] = [
     fallbackBrand: "ArtLine",
     categories: [{ url: "https://artline.ua/catalog/filamenty-i-smoly/", maxPages: 4 }],
   }),
-  createSchemaMicrodataAdapter({
-    key: "brain",
-    meta: {
-      slug: "brain",
-      name: "Brain",
-      url: "https://brain.com.ua",
-      deliveryKyiv: true,
-      deliveryUa: true,
-    },
-    fallbackBrand: "Brain",
-    categories: [
-      { url: "https://brain.com.ua/category/Rashodniki_k_3D_pechati-c1804/filter=a1804-684/", maxPages: 3 },
-    ],
-  }),
-  createSchemaMicrodataAdapter({
-    key: "rozetka",
-    meta: {
-      slug: "rozetka",
-      name: "Rozetka",
-      url: "https://rozetka.com.ua",
-      deliveryKyiv: true,
-      deliveryUa: true,
-    },
-    fallbackBrand: "Rozetka",
-    categories: [
-      { url: "https://rozetka.com.ua/ua/rashodnie-materiali-dlya-3d-printerov/c4671751/", maxPages: 3 },
-    ],
-  }),
+  // Brain повертає HTTP 403 навіть із браузерним User-Agent при простому
+  // fetch (повноцінний WAF) — рендеримо headless-браузером (browser-fetch.ts).
+  {
+    ...createSchemaMicrodataAdapter({
+      key: "brain",
+      meta: {
+        slug: "brain",
+        name: "Brain",
+        url: "https://brain.com.ua",
+        deliveryKyiv: true,
+        deliveryUa: true,
+      },
+      fallbackBrand: "Brain",
+      categories: [
+        { url: "https://brain.com.ua/category/Rashodniki_k_3D_pechati-c1804/filter=a1804-684/", maxPages: 3 },
+      ],
+    }),
+    fetchPage: browserFetchHtml,
+  },
+  // Те саме для Rozetka — HTTP 403 на простий fetch.
+  {
+    ...createSchemaMicrodataAdapter({
+      key: "rozetka",
+      meta: {
+        slug: "rozetka",
+        name: "Rozetka",
+        url: "https://rozetka.com.ua",
+        deliveryKyiv: true,
+        deliveryUa: true,
+      },
+      fallbackBrand: "Rozetka",
+      categories: [
+        { url: "https://rozetka.com.ua/ua/rashodnie-materiali-dlya-3d-printerov/c4671751/", maxPages: 3 },
+      ],
+    }),
+    fetchPage: browserFetchHtml,
+  },
   // OLX — дошки оголошень, а не магазин: у більшості оголошень немає
   // структурованої Product-розмітки, тож цей адаптер, найімовірніше,
   // повертатиме 0 позицій, поки не буде написаний окремий парсер під
