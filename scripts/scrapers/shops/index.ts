@@ -94,7 +94,7 @@ export const shopAdapters: ShopAdapter[] = [
     // Реальна схема пагінації (з логів CI): шлях-сегмент `page=N` без "?",
     // без слеша в кінці — `?page=N` сайт просто ігнорує й віддає 1-шу сторінку.
     paginate: (base, page) => (page <= 1 ? base : `${base}page=${page}`),
-    categories: [{ url: "https://artline.ua/catalog/filamenty-i-smoly/", maxPages: 8 }],
+    categories: [{ url: "https://artline.ua/catalog/filamenty-i-smoly/", maxPages: 20 }],
   }),
   // Brain повертає HTTP 403 навіть із браузерним User-Agent при простому
   // fetch (повноцінний WAF) — рендеримо headless-браузером. Підтверджено
@@ -109,14 +109,16 @@ export const shopAdapters: ShopAdapter[] = [
       deliveryKyiv: true,
       deliveryUa: true,
     },
-    // Реальна схема пагінації (з логів CI): шлях-сегмент `page=N/` у кінці —
-    // сайт сам пропонує посилання на іншу канонічну категорію без фільтра
-    // (Plastik_dlya_3D-printeriv-c684, до 84 сторінок — це набагато ширша,
-    // непрофільна категорія), тож пагінуємо в межах ТІЄЇ Ж відфільтрованої
-    // URL, просто додаючи page=N/, а не переходимо на чужу категорію.
+    // "Rashodniki_k_3D_pechati-c1804/filter=a1804-684/" (батьківська категорія
+    // "витратні матеріали" + фасет a1804=684) — це той самий контент, що й
+    // канонічна підкатегорія "Plastik_dlya_3D-printeriv-c684" ("пластик для
+    // 3D-принтерів"), просто інша URL-форма: сама сторінка своїми
+    // посиланнями пагінації веде саме на канонічну форму. Додавання
+    // `page=N/` до відфільтрованого URL дає 404 — переходимо одразу на
+    // канонічний шлях, де пагінація підтверджено працює.
     paginate: (base, page) => (page <= 1 ? base : `${base.replace(/\/$/, "")}/page=${page}/`),
     categories: [
-      { url: "https://brain.com.ua/category/Rashodniki_k_3D_pechati-c1804/filter=a1804-684/", maxPages: 10 },
+      { url: "https://brain.com.ua/ukr/category/Plastik_dlya_3D-printeriv-c684/", maxPages: 10 },
     ],
   }),
   // Те саме для Rozetka — HTTP 403 на простий fetch.
@@ -135,7 +137,7 @@ export const shopAdapters: ShopAdapter[] = [
       // query-параметр — `?page=N` сайт ігнорує й віддає 1-шу сторінку.
       paginate: (base, page) => (page <= 1 ? base : `${base.replace(/\/$/, "")}/page=${page}/`),
       categories: [
-        { url: "https://rozetka.com.ua/ua/rashodnie-materiali-dlya-3d-printerov/c4671751/", maxPages: 8 },
+        { url: "https://rozetka.com.ua/ua/rashodnie-materiali-dlya-3d-printerov/c4671751/", maxPages: 20 },
       ],
     }),
     fetchPage: browserFetchHtml,
