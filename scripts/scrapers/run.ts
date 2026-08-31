@@ -6,6 +6,26 @@ import type { RawListing } from "./types";
 
 const prisma = new PrismaClient();
 
+/**
+ * Коли адаптер не знайшов жодної позиції на сторінці, друкуємо шматок
+ * реального HTML у лог CI — це єдиний спосіб побачити справжню розмітку
+ * магазину (з локального середовища розробки немає доступу в інтернет до
+ * самих сайтів), щоб полагодити селектори за фактом, а не навмання.
+ */
+function logHtmlDebug(url: string, html: string) {
+  console.log(`  [debug] ${url} length=${html.length}`);
+  const hasPriceWord = /грн|₴/i.test(html);
+  const productWordCount = (html.match(/product/gi) ?? []).length;
+  console.log(`  [debug] contains "грн/₴": ${hasPriceWord}, "product" occurrences: ${productWordCount}`);
+  const priceIdx = html.search(/грн|₴/i);
+  if (priceIdx >= 0) {
+    const start = Math.max(0, priceIdx - 400);
+    console.log(`  [debug] snippet around first price mention:\n${html.slice(start, priceIdx + 200)}`);
+  } else {
+    console.log(`  [debug] head snippet:\n${html.slice(0, 800)}`);
+  }
+}
+
 async function findOrCreateFilament(raw: RawListing) {
   const material = normalizeMaterial(raw.material);
   const brand = raw.brand.trim();
@@ -94,7 +114,10 @@ async function main() {
 
         const listings = adapter.parseCategoryPage(html, url);
         console.log(`  ${url} -> ${listings.length} listings`);
-        if (listings.length === 0) break; // конец пагинации или сломанные селекторы
+        if (listings.length === 0) {
+          if (page === 1) logHtmlDebug(url, html);
+          break; // конец пагинації або зламані селектори
+        }
 
         for (const raw of listings) {
           try {

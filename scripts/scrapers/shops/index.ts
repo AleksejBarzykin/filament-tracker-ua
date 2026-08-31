@@ -54,7 +54,7 @@ export const shopAdapters: ShopAdapter[] = [
       deliveryUa: true,
     },
     fallbackBrand: "Filament-Shop",
-    categories: [{ url: "https://filament-shop.in.ua/katalog/", maxPages: 3 }],
+    categories: [{ url: "https://filament-shop.in.ua/", maxPages: 1 }],
   }),
   // UKR3D работает на платформе Prom.ua (характерные URL вида
   // /g<id>-slug/ для групп товаров) — Prom-витрины обычно тоже отдают
@@ -70,7 +70,7 @@ export const shopAdapters: ShopAdapter[] = [
     },
     fallbackBrand: "UKR3D",
     categories: [
-      { url: "https://ukr3d.com.ua/ua/g145708343-pla-plastik-dlya", maxPages: 3 },
+      { url: "https://ukr3d.com.ua/ua/g145708343-pla-plastik-dlya/", maxPages: 3 },
       { url: "https://ukr3d.com.ua/g145752746-plastik-petg/", maxPages: 3 },
     ],
   }),

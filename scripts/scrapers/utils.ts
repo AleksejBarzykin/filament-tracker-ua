@@ -1,5 +1,8 @@
+// Ряд великих майданчиків (Brain, Rozetka) віддає 403 ботам, що явно
+// зізнаються ботом у User-Agent — тому видаємо себе за звичайний браузер
+// (звичайна практика для цінових агрегаторів, дані публічні).
 const USER_AGENT =
-  "Mozilla/5.0 (compatible; FilamentTrackerUA/1.0; +https://github.com/) price monitor bot";
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36";
 
 export async function fetchHtml(url: string, retries = 2): Promise<string | null> {
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -7,7 +10,7 @@ export async function fetchHtml(url: string, retries = 2): Promise<string | null
       const res = await fetch(url, {
         headers: {
           "User-Agent": USER_AGENT,
-          Accept: "text/html,application/xhtml+xml",
+          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
           "Accept-Language": "uk-UA,uk;q=0.9,ru;q=0.8,en;q=0.7",
         },
         signal: AbortSignal.timeout(20_000),
