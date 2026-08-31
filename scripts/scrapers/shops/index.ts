@@ -3,6 +3,7 @@ import { createWooCommerceAdapter } from "./woocommerce-generic";
 import { createSchemaMicrodataAdapter } from "./schema-microdata-generic";
 import { createReelCardAdapter } from "./reel-card-generic";
 import { createDataAttrCardAdapter } from "./data-attr-card-generic";
+import { createCatalogCardAdapter } from "./catalog-card-generic";
 
 /**
  * Реестр адаптеров магазинов и площадок. Категории/URL ниже свёрены с
@@ -57,9 +58,11 @@ export const shopAdapters: ShopAdapter[] = [
     categories: [{ url: "https://filament-shop.in.ua/", maxPages: 1 }],
   }),
   // UKR3D работает на платформе Prom.ua (характерные URL вида
-  // /g<id>-slug/ для групп товаров) — Prom-витрины обычно тоже отдают
-  // schema.org микроразметку карточек товара для SEO.
-  createSchemaMicrodataAdapter({
+  // /g<id>-slug/ для групп товаров). Підтверджено реальним HTML з логів CI:
+  // картка товару — `.catalogCard-box`, назва в aria-label посилання.
+  // PLA-груп 404-ить під обома перевіреними варіантами URL — залишено лише
+  // PETG, який точно відповідає 200.
+  createCatalogCardAdapter({
     key: "ukr3d",
     meta: {
       slug: "ukr3d",
@@ -69,10 +72,7 @@ export const shopAdapters: ShopAdapter[] = [
       deliveryUa: true,
     },
     fallbackBrand: "UKR3D",
-    categories: [
-      { url: "https://ukr3d.com.ua/g145708343-pla-plastik-dlya/", maxPages: 3 },
-      { url: "https://ukr3d.com.ua/g145752746-plastik-petg/", maxPages: 3 },
-    ],
+    categories: [{ url: "https://ukr3d.com.ua/g145752746-plastik-petg/", maxPages: 3 }],
   }),
   // Підтверджено реальним HTML з логів CI: картка `.goods-card` несе GA4
   // ecommerce data-атрибути (data-name/data-price/data-brand) прямо на собі.
