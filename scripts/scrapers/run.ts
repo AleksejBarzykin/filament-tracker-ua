@@ -17,11 +17,31 @@ function logHtmlDebug(url: string, html: string) {
   const hasPriceWord = /грн|₴/i.test(html);
   const productWordCount = (html.match(/product/gi) ?? []).length;
   console.log(`  [debug] contains "грн/₴": ${hasPriceWord}, "product" occurrences: ${productWordCount}`);
+
+  // Друкуємо ширший фрагмент навколо першої картки товару (шукаємо типові
+  // маркери контейнера картки), щоб побачити title+link+price разом, а не
+  // лише перше згадування ціни (яке часто потрапляє на кошик/хедер).
+  const cardMarkers = [
+    /class="[^"]*goods-card[^"]*"/i,
+    /class="[^"]*product-item[^"]*"/i,
+    /class="[^"]*products-list[^"]*"/i,
+    /class="[^"]*catalog-item[^"]*"/i,
+  ];
+  let printedCard = false;
+  for (const marker of cardMarkers) {
+    const idx = html.search(marker);
+    if (idx >= 0) {
+      console.log(`  [debug] snippet around card marker ${marker}:\n${html.slice(idx, idx + 1400)}`);
+      printedCard = true;
+      break;
+    }
+  }
+
   const priceIdx = html.search(/грн|₴/i);
   if (priceIdx >= 0) {
     const start = Math.max(0, priceIdx - 400);
     console.log(`  [debug] snippet around first price mention:\n${html.slice(start, priceIdx + 200)}`);
-  } else {
+  } else if (!printedCard) {
     console.log(`  [debug] head snippet:\n${html.slice(0, 800)}`);
   }
 }

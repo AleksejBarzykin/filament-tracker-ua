@@ -4,6 +4,21 @@
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36";
 
+/**
+ * Деякі магазини (Plexiwire, UKR3D — судячи з ідентичного скрипту, той самий
+ * хостинг/anti-bot сервіс) віддають на перший запит не сторінку, а невеличкий
+ * JS-виклик: він рахує щось у циклі (для вигляду — результат нікуди не йде),
+ * тоді виставляє cookie `challenge_passed=<hash>` і робить reload. Сам hash
+ * зашитий у відповідь відкритим текстом, тож достатньо повторити запит з цим
+ * cookie — без запуску JS чи headless-браузера.
+ */
+function extractChallengeCookie(html: string): string | null {
+  const match = html.match(/document\.cookie\s*=\s*"challenge_passed="\s*\+\s*defaultHash/);
+  if (!match) return null;
+  const hashMatch = html.match(/const\s+defaultHash\s*=\s*"([0-9a-f]+)"/i);
+  return hashMatch ? `challenge_passed=${hashMatch[1]}` : null;
+}
+
 export async function fetchHtml(url: string, retries = 2): Promise<string | null> {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
@@ -20,7 +35,21 @@ export async function fetchHtml(url: string, retries = 2): Promise<string | null
         if (res.status >= 500 && attempt < retries) continue;
         return null;
       }
-      return await res.text();
+      const html = await res.text();
+      const challengeCookie = extractChallengeCookie(html);
+      if (challengeCookie) {
+        const retryRes = await fetch(url, {
+          headers: {
+            "User-Agent": USER_AGENT,
+            Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "uk-UA,uk;q=0.9,ru;q=0.8,en;q=0.7",
+            Cookie: challengeCookie,
+          },
+          signal: AbortSignal.timeout(20_000),
+        });
+        if (retryRes.ok) return await retryRes.text();
+      }
+      return html;
     } catch (err) {
       console.warn(`[fetchHtml] ${url} failed (attempt ${attempt + 1}):`, (err as Error).message);
       if (attempt === retries) return null;

@@ -1,6 +1,7 @@
 import type { ShopAdapter } from "../types";
 import { createWooCommerceAdapter } from "./woocommerce-generic";
 import { createSchemaMicrodataAdapter } from "./schema-microdata-generic";
+import { createReelCardAdapter } from "./reel-card-generic";
 
 /**
  * Реестр адаптеров магазинов и площадок. Категории/URL ниже свёрены с
@@ -28,11 +29,9 @@ export const shopAdapters: ShopAdapter[] = [
       { url: "https://shop.plexiwire.com.ua/asa-filament/", maxPages: 2 },
     ],
   }),
-  // 3dplastic.com.ua не WooCommerce и почти весь ассортимент — один товар
-  // (PETG) в разных кольорах, каждый на отдельной сторінці без явного
-  // каталогу — пробуем microdata/JSON-LD с головної, при 0 позиціях треба
-  // окремий парсер під конкретні product-сторінки.
-  createSchemaMicrodataAdapter({
+  // Підтверджено реальним HTML з логів CI: 3dplastic.com.ua на головній
+  // рендерить картки товару як article.reel (не WooCommerce, не schema.org).
+  createReelCardAdapter({
     key: "3dplastic",
     meta: {
       slug: "3dplastic",
@@ -70,7 +69,7 @@ export const shopAdapters: ShopAdapter[] = [
     },
     fallbackBrand: "UKR3D",
     categories: [
-      { url: "https://ukr3d.com.ua/ua/g145708343-pla-plastik-dlya/", maxPages: 3 },
+      { url: "https://ukr3d.com.ua/g145708343-pla-plastik-dlya/", maxPages: 3 },
       { url: "https://ukr3d.com.ua/g145752746-plastik-petg/", maxPages: 3 },
     ],
   }),
