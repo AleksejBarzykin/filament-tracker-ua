@@ -69,7 +69,7 @@ export default function PriceExplorer({ board }: { board: BoardFilament[] }) {
   return (
     <div className="flex flex-col gap-6">
       {/* Панель фільтрів */}
-      <div className="rise-in rounded-[var(--radius)] border border-line bg-surface p-4 sm:p-5">
+      <div className="rise-in relative z-10 rounded-[var(--radius)] border border-line bg-surface p-4 sm:p-5">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
           <label className="flex flex-col gap-1 lg:col-span-2">
             <span className="text-[11px] uppercase tracking-wider text-muted">Пошук</span>
