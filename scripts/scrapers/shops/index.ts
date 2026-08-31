@@ -5,6 +5,7 @@ import { createReelCardAdapter } from "./reel-card-generic";
 import { createDataAttrCardAdapter } from "./data-attr-card-generic";
 import { createCatalogCardAdapter } from "./catalog-card-generic";
 import { browserFetchHtml } from "../browser-fetch";
+import { createBrainAdapter } from "./brain-adapter";
 
 /**
  * Реестр адаптеров магазинов и площадок. Категории/URL ниже свёрены с
@@ -90,24 +91,22 @@ export const shopAdapters: ShopAdapter[] = [
     categories: [{ url: "https://artline.ua/catalog/filamenty-i-smoly/", maxPages: 4 }],
   }),
   // Brain повертає HTTP 403 навіть із браузерним User-Agent при простому
-  // fetch (повноцінний WAF) — рендеримо headless-браузером (browser-fetch.ts).
-  {
-    ...createSchemaMicrodataAdapter({
-      key: "brain",
-      meta: {
-        slug: "brain",
-        name: "Brain",
-        url: "https://brain.com.ua",
-        deliveryKyiv: true,
-        deliveryUa: true,
-      },
-      fallbackBrand: "Brain",
-      categories: [
-        { url: "https://brain.com.ua/category/Rashodniki_k_3D_pechati-c1804/filter=a1804-684/", maxPages: 3 },
-      ],
-    }),
-    fetchPage: browserFetchHtml,
-  },
+  // fetch (повноцінний WAF) — рендеримо headless-браузером. Підтверджено
+  // реальним HTML з логів CI: картка `.product-wrapper` несе аналітичні
+  // data-атрибути (data-name/data-vendor/data-price/data-slug) прямо на собі.
+  createBrainAdapter({
+    key: "brain",
+    meta: {
+      slug: "brain",
+      name: "Brain",
+      url: "https://brain.com.ua",
+      deliveryKyiv: true,
+      deliveryUa: true,
+    },
+    categories: [
+      { url: "https://brain.com.ua/category/Rashodniki_k_3D_pechati-c1804/filter=a1804-684/", maxPages: 5 },
+    ],
+  }),
   // Те саме для Rozetka — HTTP 403 на простий fetch.
   {
     ...createSchemaMicrodataAdapter({
