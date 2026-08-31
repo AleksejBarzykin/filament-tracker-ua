@@ -20,6 +20,7 @@ export type BoardFilament = {
   color: string;
   diameterMm: number;
   weightG: number;
+  imageUrl: string | null;
   bestPrice: number;
   onSale: boolean;
   offers: BoardOffer[];
@@ -71,6 +72,7 @@ export async function getBoard(): Promise<BoardFilament[]> {
         color: f.color,
         diameterMm: f.diameterMm,
         weightG: f.weightG,
+        imageUrl: f.imageUrl,
         bestPrice,
         onSale: offers.some((o) => (o.discountPct ?? 0) > 0),
         offers,

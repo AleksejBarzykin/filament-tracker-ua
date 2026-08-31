@@ -11,6 +11,34 @@ type SortKey = "price-asc" | "price-desc" | "brand";
 
 const currency = new Intl.NumberFormat("uk-UA", { maximumFractionDigits: 0 });
 
+/** Фото котушки з магазину, якщо є — з фолбеком на кольоровий кружок при
+ * відсутньому фото або помилці завантаження (хотлінк-захист тощо). */
+function Swatch({ imageUrl, color }: { imageUrl: string | null; color: string }) {
+  const [failed, setFailed] = useState(false);
+
+  if (imageUrl && !failed) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={imageUrl}
+        alt=""
+        aria-hidden
+        loading="lazy"
+        onError={() => setFailed(true)}
+        className="h-10 w-10 shrink-0 rounded-full border border-line/60 bg-surface-2 object-cover"
+      />
+    );
+  }
+
+  return (
+    <span
+      className="spool-swatch h-10 w-10 shrink-0 rounded-full"
+      style={{ background: colorToHex(color) }}
+      aria-hidden
+    />
+  );
+}
+
 export default function PriceExplorer({ board }: { board: BoardFilament[] }) {
   const materialOptions = useMemo(
     () => Array.from(new Set(board.map((f) => f.material))).sort(),
@@ -153,11 +181,7 @@ export default function PriceExplorer({ board }: { board: BoardFilament[] }) {
                 onClick={() => setExpanded(isOpen ? null : f.id)}
                 className="flex w-full flex-wrap items-center gap-4 p-4 text-left transition hover:bg-surface-2 sm:flex-nowrap"
               >
-                <span
-                  className="spool-swatch h-10 w-10 shrink-0 rounded-full"
-                  style={{ background: colorToHex(f.color) }}
-                  aria-hidden
-                />
+                <Swatch imageUrl={f.imageUrl} color={f.color} />
 
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-baseline gap-x-2">
