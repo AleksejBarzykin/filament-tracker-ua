@@ -19,6 +19,9 @@ const shops = [
   { slug: "filament-shop", name: "Filament-Shop.in.ua", url: "https://filament-shop.in.ua", scraperKey: "filament-shop" },
   { slug: "ukr3d", name: "UKR3D", url: "https://ukr3d.com.ua", scraperKey: "ukr3d" },
   { slug: "artline", name: "ArtLine", url: "https://artline.ua", scraperKey: "artline" },
+  { slug: "brain", name: "Brain", url: "https://brain.com.ua", scraperKey: "brain" },
+  { slug: "rozetka", name: "Rozetka", url: "https://rozetka.com.ua", scraperKey: "rozetka" },
+  { slug: "olx", name: "OLX", url: "https://www.olx.ua", scraperKey: "olx" },
 ] as const;
 
 type SeedFilament = {
@@ -142,6 +145,66 @@ const filaments: SeedFilament[] = [
     diameterMm: 1.75,
     weightG: 1000,
     offers: [{ shop: "3dplastic", price: 1290, oldPrice: 1450 }],
+  },
+  {
+    brand: "Creality",
+    material: "PLA",
+    color: "Помаранчевий",
+    diameterMm: 1.75,
+    weightG: 1000,
+    offers: [
+      { shop: "brain", price: 479 },
+      { shop: "rozetka", price: 499, oldPrice: 549 },
+    ],
+  },
+  {
+    brand: "Creality",
+    material: "PLA",
+    color: "Чорний",
+    diameterMm: 1.75,
+    weightG: 1000,
+    offers: [
+      { shop: "rozetka", price: 469 },
+      { shop: "brain", price: 489 },
+    ],
+  },
+  {
+    brand: "Bambu Lab",
+    material: "PLA",
+    color: "Білий",
+    diameterMm: 1.75,
+    weightG: 1000,
+    offers: [{ shop: "rozetka", price: 899, oldPrice: 999 }],
+  },
+  {
+    brand: "Elegoo",
+    material: "PLA",
+    color: "Сірий",
+    diameterMm: 1.75,
+    weightG: 1000,
+    offers: [{ shop: "brain", price: 459 }],
+  },
+  {
+    brand: "Kingroon",
+    material: "PLA",
+    color: "Чорний",
+    diameterMm: 1.75,
+    weightG: 1000,
+    offers: [
+      { shop: "olx", price: 399 },
+      { shop: "brain", price: 445 },
+    ],
+  },
+  {
+    brand: "SUNLU",
+    material: "PETG",
+    color: "Білий",
+    diameterMm: 1.75,
+    weightG: 1000,
+    offers: [
+      { shop: "olx", price: 350, oldPrice: 420 },
+      { shop: "ukr3d", price: 399 },
+    ],
   },
 ];
 

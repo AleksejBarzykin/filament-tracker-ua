@@ -44,13 +44,26 @@ npm run check-notifications  # перевірити підписки на зни
 
 - **Селектори скраперів**: звірити з реальною версткою кожного магазину після
   першого запуску екшена (лог покаже `0 listings`, якщо селектор не підійшов).
+  URL категорій підібрані через веб-пошук (без прямого доступу до самих
+  сайтів із цього середовища), тож вони можуть застаріти чи не покривати
+  весь асортимент.
+- **OLX**: класифайд-оголошення зазвичай не мають структурованої
+  schema.org/JSON-LD розмітки товару (на відміну від звичайних магазинів),
+  тож `createSchemaMicrodataAdapter` для OLX, найімовірніше, поверне
+  0 позицій — під нього варто написати окремий парсер конкретно під
+  розмітку сторінки оголошення.
+- **Rozetka/Brain**: рендеряться JS-фреймворком; адаптер розрахований на
+  server-side мікророзмітку (schema.org/JSON-LD), яку такі великі майданчики
+  зазвичай віддають для SEO — якщо ні, знадобиться headless-browser скрапер
+  (Playwright) замість простого HTTP+cheerio.
 - **Відправка email**: `scripts/check-notifications.ts` зараз лише логує, кому
   й що треба надіслати — підключити провайдера (Resend/Postmark/SMTP) в
   позначеному `TODO`.
-- **Магазини**: зараз підключено 5 магазинів (Plexiwire, 3DPlastic,
-  Filament-Shop.in.ua, UKR3D, ArtLine). Маркетплейси (Rozetka, OLX, Prom.ua)
-  мають іншу структуру каталогу/API — під них потрібні окремі адаптери
-  (`ShopAdapter` в `scripts/scrapers/types.ts`).
+- **Магазини/майданчики**: підключено Plexiwire, 3DPlastic,
+  Filament-Shop.in.ua, UKR3D (Prom.ua), ArtLine, Brain, Rozetka, OLX.
+  **Бренди**: список відомих виробників (для розпізнавання з назви товару) —
+  `scripts/scrapers/utils.ts` (`KNOWN_BRANDS`), включно з Creality, Bambu Lab,
+  Elegoo, Kingroon, SUNLU, eSUN та ін.
 - Якщо деплоїш не на платформу з персистентним диском для SQLite — постав
   `DATABASE_URL` на зовнішню Postgres-базу і онови `datasource` у
   `prisma/schema.prisma` (`provider = "postgresql"`), або тримай `dev.db` як

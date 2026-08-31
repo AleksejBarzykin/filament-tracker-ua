@@ -77,6 +77,13 @@ const KNOWN_BRANDS = [
   "Kingroon",
   "Polymaker",
   "ColorFabb",
+  "Bambu Lab",
+  "BambuLab",
+  "Elegoo",
+  "333print",
+  "Inslogic",
+  "CREAT3D",
+  "Spectrum",
 ];
 
 export function guessBrand(text: string, fallback: string): string {

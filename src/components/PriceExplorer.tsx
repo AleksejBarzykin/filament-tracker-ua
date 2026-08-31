@@ -5,31 +5,36 @@ import type { BoardFilament } from "@/lib/queries";
 import { colorToHex } from "@/lib/colors";
 import PriceHistoryChart from "./PriceHistoryChart";
 import SubscribeModal from "./SubscribeModal";
+import MultiSelect from "./MultiSelect";
 
 type SortKey = "price-asc" | "price-desc" | "brand";
 
 const currency = new Intl.NumberFormat("uk-UA", { maximumFractionDigits: 0 });
 
 export default function PriceExplorer({ board }: { board: BoardFilament[] }) {
-  const materials = useMemo(
+  const materialOptions = useMemo(
     () => Array.from(new Set(board.map((f) => f.material))).sort(),
     [board]
   );
-  const brands = useMemo(() => Array.from(new Set(board.map((f) => f.brand))).sort(), [board]);
-  const shops = useMemo(
+  const brandOptions = useMemo(
+    () => Array.from(new Set(board.map((f) => f.brand))).sort(),
+    [board]
+  );
+  const shopOptions = useMemo(
     () =>
       Array.from(new Map(board.flatMap((f) => f.offers).map((o) => [o.shopSlug, o.shopName])).entries()),
     [board]
   );
+  const shopOptionLabels = useMemo(() => Object.fromEntries(shopOptions), [shopOptions]);
   const maxPriceAll = useMemo(
     () => Math.max(1000, ...board.map((f) => f.bestPrice)),
     [board]
   );
 
   const [query, setQuery] = useState("");
-  const [material, setMaterial] = useState<string>("all");
-  const [brand, setBrand] = useState<string>("all");
-  const [shop, setShop] = useState<string>("all");
+  const [materials, setMaterials] = useState<string[]>([]);
+  const [brands, setBrands] = useState<string[]>([]);
+  const [shops, setShops] = useState<string[]>([]);
   const [maxPrice, setMaxPrice] = useState<number>(0); // 0 = без обмеження
   const [onlySale, setOnlySale] = useState(false);
   const [onlyInStock, setOnlyInStock] = useState(true);
@@ -38,9 +43,9 @@ export default function PriceExplorer({ board }: { board: BoardFilament[] }) {
 
   const filtered = useMemo(() => {
     let rows = board.filter((f) => {
-      if (material !== "all" && f.material !== material) return false;
-      if (brand !== "all" && f.brand !== brand) return false;
-      if (shop !== "all" && !f.offers.some((o) => o.shopSlug === shop)) return false;
+      if (materials.length > 0 && !materials.includes(f.material)) return false;
+      if (brands.length > 0 && !brands.includes(f.brand)) return false;
+      if (shops.length > 0 && !f.offers.some((o) => shops.includes(o.shopSlug))) return false;
       if (onlySale && !f.onSale) return false;
       if (onlyInStock && !f.offers.some((o) => o.inStock)) return false;
       if (maxPrice > 0 && f.bestPrice > maxPrice) return false;
@@ -59,7 +64,7 @@ export default function PriceExplorer({ board }: { board: BoardFilament[] }) {
     });
 
     return rows;
-  }, [board, material, brand, shop, onlySale, onlyInStock, maxPrice, query, sort]);
+  }, [board, materials, brands, shops, onlySale, onlyInStock, maxPrice, query, sort]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -76,15 +81,14 @@ export default function PriceExplorer({ board }: { board: BoardFilament[] }) {
             />
           </label>
 
-          <Select label="Матеріал" value={material} onChange={setMaterial} options={["all", ...materials]} allLabel="Усі матеріали" />
-          <Select label="Бренд" value={brand} onChange={setBrand} options={["all", ...brands]} allLabel="Усі бренди" />
-          <Select
+          <MultiSelect label="Матеріал" options={materialOptions} selected={materials} onChange={setMaterials} />
+          <MultiSelect label="Бренд" options={brandOptions} selected={brands} onChange={setBrands} />
+          <MultiSelect
             label="Магазин"
-            value={shop}
-            onChange={setShop}
-            options={["all", ...shops.map(([slug]) => slug)]}
-            optionLabels={Object.fromEntries([["all", "Усі магазини"], ...shops])}
-            allLabel="Усі магазини"
+            options={shopOptions.map(([slug]) => slug)}
+            optionLabels={shopOptionLabels}
+            selected={shops}
+            onChange={setShops}
           />
 
           <label className="flex flex-col gap-1">
@@ -264,39 +268,6 @@ function plural(n: number) {
   if (n === 1) return "магазин";
   if (n >= 2 && n <= 4) return "магазини";
   return "магазинів";
-}
-
-function Select({
-  label,
-  value,
-  onChange,
-  options,
-  optionLabels,
-  allLabel,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  options: string[];
-  optionLabels?: Record<string, string>;
-  allLabel: string;
-}) {
-  return (
-    <label className="flex flex-col gap-1">
-      <span className="text-[11px] uppercase tracking-wider text-muted">{label}</span>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="rounded-md border border-line bg-ink px-3 py-2 text-sm text-paper outline-none focus:border-accent"
-      >
-        {options.map((o) => (
-          <option key={o} value={o}>
-            {o === "all" ? allLabel : optionLabels?.[o] ?? o}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
 }
 
 function Toggle({

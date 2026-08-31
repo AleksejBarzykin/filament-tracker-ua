@@ -1,15 +1,14 @@
 import type { ShopAdapter } from "../types";
 import { createWooCommerceAdapter } from "./woocommerce-generic";
+import { createSchemaMicrodataAdapter } from "./schema-microdata-generic";
 
 /**
- * Реестр адаптеров магазинов. Каждый адаптер целится в 1-2 широких страницы
- * каталога (все филаменты) вместо точных категорий по материалу — материал,
- * бренд и цвет извлекаются из названия товара (см. utils.ts). Так адаптер
- * меньше зависит от точной структуры категорий конкретного магазина, которую
- * не удалось проверить вживую из этой среды (нет доступа в интернет к сайтам
- * магазинов). Селекторы карточек товара нужно свериться и поправить при
- * первом реальном запуске через `npm run scrape` в среде с доступом в сеть
- * (например, в GitHub Actions).
+ * Реестр адаптеров магазинов и площадок. Категории/URL ниже свёрены с
+ * реальными страницами через веб-поиск (в этой среде разработки нет прямого
+ * доступа в интернет к самим сайтам магазинов, поэтому вживую HTML не
+ * проверялся) — при первом реальном запуске (`npm run scrape` в среде с
+ * доступом в сеть, например GitHub Actions) смотри в лог на `-> 0 listings`
+ * по конкретному магазину и поправляй селекторы/URL под него.
  */
 export const shopAdapters: ShopAdapter[] = [
   createWooCommerceAdapter({
@@ -23,12 +22,17 @@ export const shopAdapters: ShopAdapter[] = [
     },
     fallbackBrand: "Plexiwire",
     categories: [
-      { url: "https://shop.plexiwire.com.ua/ru/pla-filament/", maxPages: 3 },
-      { url: "https://shop.plexiwire.com.ua/ru/petg-filament/", maxPages: 3 },
-      { url: "https://shop.plexiwire.com.ua/ru/abs-filament/", maxPages: 2 },
+      { url: "https://shop.plexiwire.com.ua/pla-filament/", maxPages: 3 },
+      { url: "https://shop.plexiwire.com.ua/petg-filament/", maxPages: 3 },
+      { url: "https://shop.plexiwire.com.ua/abs-filament/", maxPages: 2 },
+      { url: "https://shop.plexiwire.com.ua/asa-filament/", maxPages: 2 },
     ],
   }),
-  createWooCommerceAdapter({
+  // 3dplastic.com.ua не WooCommerce и почти весь ассортимент — один товар
+  // (PETG) в разных кольорах, каждый на отдельной сторінці без явного
+  // каталогу — пробуем microdata/JSON-LD с головної, при 0 позиціях треба
+  // окремий парсер під конкретні product-сторінки.
+  createSchemaMicrodataAdapter({
     key: "3dplastic",
     meta: {
       slug: "3dplastic",
@@ -38,7 +42,7 @@ export const shopAdapters: ShopAdapter[] = [
       deliveryUa: true,
     },
     fallbackBrand: "3DPlastic",
-    categories: [{ url: "https://www.3dplastic.com.ua/ua/katalog", maxPages: 3 }],
+    categories: [{ url: "https://www.3dplastic.com.ua/", maxPages: 1 }],
   }),
   createWooCommerceAdapter({
     key: "filament-shop",
@@ -52,7 +56,10 @@ export const shopAdapters: ShopAdapter[] = [
     fallbackBrand: "Filament-Shop",
     categories: [{ url: "https://filament-shop.in.ua/katalog/", maxPages: 3 }],
   }),
-  createWooCommerceAdapter({
+  // UKR3D работает на платформе Prom.ua (характерные URL вида
+  // /g<id>-slug/ для групп товаров) — Prom-витрины обычно тоже отдают
+  // schema.org микроразметку карточек товара для SEO.
+  createSchemaMicrodataAdapter({
     key: "ukr3d",
     meta: {
       slug: "ukr3d",
@@ -62,7 +69,10 @@ export const shopAdapters: ShopAdapter[] = [
       deliveryUa: true,
     },
     fallbackBrand: "UKR3D",
-    categories: [{ url: "https://ukr3d.com.ua/ru/plastik-dlya-3d-pechati/", maxPages: 3 }],
+    categories: [
+      { url: "https://ukr3d.com.ua/ua/g145708343-pla-plastik-dlya", maxPages: 3 },
+      { url: "https://ukr3d.com.ua/g145752746-plastik-petg/", maxPages: 3 },
+    ],
   }),
   createWooCommerceAdapter({
     key: "artline",
@@ -74,6 +84,56 @@ export const shopAdapters: ShopAdapter[] = [
       deliveryUa: true,
     },
     fallbackBrand: "ArtLine",
-    categories: [{ url: "https://artline.ua/catalog/filamenty-i-smoly", maxPages: 4 }],
+    categories: [{ url: "https://artline.ua/catalog/filamenty-i-smoly/", maxPages: 4 }],
+  }),
+  createSchemaMicrodataAdapter({
+    key: "brain",
+    meta: {
+      slug: "brain",
+      name: "Brain",
+      url: "https://brain.com.ua",
+      deliveryKyiv: true,
+      deliveryUa: true,
+    },
+    fallbackBrand: "Brain",
+    categories: [
+      { url: "https://brain.com.ua/category/Rashodniki_k_3D_pechati-c1804/filter=a1804-684/", maxPages: 3 },
+    ],
+  }),
+  createSchemaMicrodataAdapter({
+    key: "rozetka",
+    meta: {
+      slug: "rozetka",
+      name: "Rozetka",
+      url: "https://rozetka.com.ua",
+      deliveryKyiv: true,
+      deliveryUa: true,
+    },
+    fallbackBrand: "Rozetka",
+    categories: [
+      { url: "https://rozetka.com.ua/ua/rashodnie-materiali-dlya-3d-printerov/c4671751/", maxPages: 3 },
+    ],
+  }),
+  // OLX — дошки оголошень, а не магазин: у більшості оголошень немає
+  // структурованої Product-розмітки, тож цей адаптер, найімовірніше,
+  // повертатиме 0 позицій, поки не буде написаний окремий парсер під
+  // конкретну вёрстку оголошення. Залишено як заготовку на прохання
+  // користувача відстежувати й OLX.
+  createSchemaMicrodataAdapter({
+    key: "olx",
+    meta: {
+      slug: "olx",
+      name: "OLX",
+      url: "https://www.olx.ua",
+      deliveryKyiv: true,
+      deliveryUa: true,
+    },
+    fallbackBrand: "OLX",
+    categories: [
+      {
+        url: "https://www.olx.ua/uk/elektronika/kompyutery-i-komplektuyuschie/q-%D0%BF%D0%BB%D0%B0%D1%81%D1%82%D0%B8%D0%BA-%D0%B4%D0%BB%D1%8F-3%D0%B4-%D0%BF%D1%80%D0%B8%D0%BD%D1%82%D0%B5%D1%80%D0%B0/",
+        maxPages: 2,
+      },
+    ],
   }),
 ];
