@@ -26,6 +26,12 @@ function logHtmlDebug(url: string, html: string) {
     /class="[^"]*product-item[^"]*"/i,
     /class="[^"]*products-list[^"]*"/i,
     /class="[^"]*catalog-item[^"]*"/i,
+    /class="[^"]*product-tile[^"]*"/i,
+    /class="[^"]*products__item[^"]*"/i,
+    /class="[^"]*product-card[^"]*"/i,
+    /class="[^"]*product\b[^"]*"/i,
+    /data-price=/i,
+    /data-product/i,
   ];
   let printedCard = false;
   for (const marker of cardMarkers) {

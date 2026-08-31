@@ -2,6 +2,7 @@ import type { ShopAdapter } from "../types";
 import { createWooCommerceAdapter } from "./woocommerce-generic";
 import { createSchemaMicrodataAdapter } from "./schema-microdata-generic";
 import { createReelCardAdapter } from "./reel-card-generic";
+import { createDataAttrCardAdapter } from "./data-attr-card-generic";
 
 /**
  * Реестр адаптеров магазинов и площадок. Категории/URL ниже свёрены с
@@ -73,7 +74,9 @@ export const shopAdapters: ShopAdapter[] = [
       { url: "https://ukr3d.com.ua/g145752746-plastik-petg/", maxPages: 3 },
     ],
   }),
-  createWooCommerceAdapter({
+  // Підтверджено реальним HTML з логів CI: картка `.goods-card` несе GA4
+  // ecommerce data-атрибути (data-name/data-price/data-brand) прямо на собі.
+  createDataAttrCardAdapter({
     key: "artline",
     meta: {
       slug: "artline",
