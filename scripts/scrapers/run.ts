@@ -16,15 +16,24 @@ function logHtmlDebug(url: string, html: string) {
   console.log(`  [debug] ${url} length=${html.length}`);
   const hasPriceWord = /грн|₴/i.test(html);
   const productWordCount = (html.match(/product/gi) ?? []).length;
-  console.log(`  [debug] contains "грн/₴": ${hasPriceWord}, "product" occurrences: ${productWordCount}`);
+  const itemtypeCount = (html.match(/itemtype/gi) ?? []).length;
+  const dataPriceCount = (html.match(/data-price/gi) ?? []).length;
+  console.log(
+    `  [debug] contains "грн/₴": ${hasPriceWord}, "product": ${productWordCount}, "itemtype": ${itemtypeCount}, "data-price": ${dataPriceCount}`
+  );
+  if (dataPriceCount > 0) {
+    const idx = html.search(/data-price/i);
+    console.log(`  [debug] snippet around data-price:\n${html.slice(Math.max(0, idx - 600), idx + 400)}`);
+  }
 
   // Друкуємо ширший фрагмент навколо першої картки товару (шукаємо типові
   // маркери контейнера картки), щоб побачити title+link+price разом, а не
   // лише перше згадування ціни (яке часто потрапляє на кошик/хедер).
   const cardMarkers = [
     /class="[^"]*goods-card[^"]*"/i,
+    /class="[^"]*goods-tile[^"]*"/i,
     /class="[^"]*product-item[^"]*"/i,
-    /class="[^"]*products-list[^"]*"/i,
+    /class="(?!qsr-)[^"]*products-list[^"]*"/i,
     /class="[^"]*catalog-item[^"]*"/i,
     /class="[^"]*product-tile[^"]*"/i,
     /class="[^"]*products__item[^"]*"/i,
