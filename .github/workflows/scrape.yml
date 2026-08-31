@@ -1,0 +1,39 @@
+name: Scrape filament prices
+
+on:
+  schedule:
+    # каждый день в 06:00 Киева (UTC+2/+3) — 04:00 UTC
+    - cron: "0 4 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: "file:./prisma/dev.db"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+
+      - run: npm ci
+
+      - name: Apply schema
+        run: npx prisma db push
+
+      - name: Run scrapers
+        run: npm run scrape
+
+      - name: Check price-drop subscriptions
+        run: npm run check-notifications
+
+      - name: Commit updated data
+        run: |
+          git config user.name "filament-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add prisma/dev.db
+          git diff --cached --quiet || git commit -m "chore: update scraped filament prices"
+          git push

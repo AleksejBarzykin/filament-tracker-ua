@@ -1,0 +1,324 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import type { BoardFilament } from "@/lib/queries";
+import { colorToHex } from "@/lib/colors";
+import PriceHistoryChart from "./PriceHistoryChart";
+import SubscribeModal from "./SubscribeModal";
+
+type SortKey = "price-asc" | "price-desc" | "brand";
+
+const currency = new Intl.NumberFormat("uk-UA", { maximumFractionDigits: 0 });
+
+export default function PriceExplorer({ board }: { board: BoardFilament[] }) {
+  const materials = useMemo(
+    () => Array.from(new Set(board.map((f) => f.material))).sort(),
+    [board]
+  );
+  const brands = useMemo(() => Array.from(new Set(board.map((f) => f.brand))).sort(), [board]);
+  const shops = useMemo(
+    () =>
+      Array.from(new Map(board.flatMap((f) => f.offers).map((o) => [o.shopSlug, o.shopName])).entries()),
+    [board]
+  );
+  const maxPriceAll = useMemo(
+    () => Math.max(1000, ...board.map((f) => f.bestPrice)),
+    [board]
+  );
+
+  const [query, setQuery] = useState("");
+  const [material, setMaterial] = useState<string>("all");
+  const [brand, setBrand] = useState<string>("all");
+  const [shop, setShop] = useState<string>("all");
+  const [maxPrice, setMaxPrice] = useState<number>(0); // 0 = без обмеження
+  const [onlySale, setOnlySale] = useState(false);
+  const [onlyInStock, setOnlyInStock] = useState(true);
+  const [sort, setSort] = useState<SortKey>("price-asc");
+  const [expanded, setExpanded] = useState<string | null>(null);
+
+  const filtered = useMemo(() => {
+    let rows = board.filter((f) => {
+      if (material !== "all" && f.material !== material) return false;
+      if (brand !== "all" && f.brand !== brand) return false;
+      if (shop !== "all" && !f.offers.some((o) => o.shopSlug === shop)) return false;
+      if (onlySale && !f.onSale) return false;
+      if (onlyInStock && !f.offers.some((o) => o.inStock)) return false;
+      if (maxPrice > 0 && f.bestPrice > maxPrice) return false;
+      if (query.trim()) {
+        const q = query.trim().toLowerCase();
+        const haystack = `${f.brand} ${f.material} ${f.color}`.toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      return true;
+    });
+
+    rows = [...rows].sort((a, b) => {
+      if (sort === "brand") return a.brand.localeCompare(b.brand);
+      if (sort === "price-desc") return b.bestPrice - a.bestPrice;
+      return a.bestPrice - b.bestPrice;
+    });
+
+    return rows;
+  }, [board, material, brand, shop, onlySale, onlyInStock, maxPrice, query, sort]);
+
+  return (
+    <div className="flex flex-col gap-6">
+      {/* Панель фільтрів */}
+      <div className="rise-in rounded-[var(--radius)] border border-line bg-surface p-4 sm:p-5">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
+          <label className="flex flex-col gap-1 lg:col-span-2">
+            <span className="text-[11px] uppercase tracking-wider text-muted">Пошук</span>
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="бренд, колір, PLA..."
+              className="rounded-md border border-line bg-ink px-3 py-2 text-sm text-paper outline-none focus:border-accent"
+            />
+          </label>
+
+          <Select label="Матеріал" value={material} onChange={setMaterial} options={["all", ...materials]} allLabel="Усі матеріали" />
+          <Select label="Бренд" value={brand} onChange={setBrand} options={["all", ...brands]} allLabel="Усі бренди" />
+          <Select
+            label="Магазин"
+            value={shop}
+            onChange={setShop}
+            options={["all", ...shops.map(([slug]) => slug)]}
+            optionLabels={Object.fromEntries([["all", "Усі магазини"], ...shops])}
+            allLabel="Усі магазини"
+          />
+
+          <label className="flex flex-col gap-1">
+            <span className="text-[11px] uppercase tracking-wider text-muted">
+              Макс. ціна {maxPrice > 0 ? `— ${currency.format(maxPrice)} ₴` : ""}
+            </span>
+            <input
+              type="range"
+              min={0}
+              max={maxPriceAll}
+              step={50}
+              value={maxPrice}
+              onChange={(e) => setMaxPrice(Number(e.target.value))}
+              className="mt-2"
+            />
+          </label>
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-4 border-t border-line pt-4">
+          <Toggle checked={onlyInStock} onChange={setOnlyInStock} label="Тільки в наявності" />
+          <Toggle checked={onlySale} onChange={setOnlySale} label="Тільки акції 🔥" />
+
+          <div className="ml-auto flex items-center gap-2 text-xs">
+            <span className="uppercase tracking-wider text-muted">Сортування</span>
+            <select
+              value={sort}
+              onChange={(e) => setSort(e.target.value as SortKey)}
+              className="rounded-md border border-line bg-ink px-2 py-1.5 font-mono text-xs text-paper outline-none focus:border-accent"
+            >
+              <option value="price-asc">Дешевші спочатку</option>
+              <option value="price-desc">Дорожчі спочатку</option>
+              <option value="brand">За брендом</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <p className="text-xs uppercase tracking-widest text-muted">
+        Знайдено позицій: <span className="font-mono text-paper">{filtered.length}</span>
+      </p>
+
+      {/* Таблиця */}
+      <div className="flex flex-col gap-3">
+        {filtered.length === 0 && (
+          <div className="rounded-[var(--radius)] border border-dashed border-line p-10 text-center text-muted">
+            Нічого не знайдено. Спробуй послабити фільтри.
+          </div>
+        )}
+
+        {filtered.map((f, i) => {
+          const isOpen = expanded === f.id;
+          const best = f.offers.find((o) => o.inStock) ?? f.offers[0];
+
+          return (
+            <div
+              key={f.id}
+              className="rise-in overflow-hidden rounded-[var(--radius)] border border-line bg-surface"
+              style={{ animationDelay: `${Math.min(i, 8) * 35}ms` }}
+            >
+              <button
+                type="button"
+                onClick={() => setExpanded(isOpen ? null : f.id)}
+                className="flex w-full flex-wrap items-center gap-4 p-4 text-left transition hover:bg-surface-2 sm:flex-nowrap"
+              >
+                <span
+                  className="spool-swatch h-10 w-10 shrink-0 rounded-full"
+                  style={{ background: colorToHex(f.color) }}
+                  aria-hidden
+                />
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-baseline gap-x-2">
+                    <span className="font-display text-lg uppercase leading-none text-paper">
+                      {f.brand}
+                    </span>
+                    <span className="rounded bg-ink px-1.5 py-0.5 font-mono text-[11px] text-accent-2">
+                      {f.material}
+                    </span>
+                    {f.onSale && (
+                      <span className="rounded bg-danger/15 px-1.5 py-0.5 font-mono text-[11px] text-danger">
+                        АКЦІЯ
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-0.5 truncate text-sm text-paper-dim">
+                    {f.color} · Ø{f.diameterMm} мм · {f.weightG} г ·{" "}
+                    <span className="text-muted">{f.offers.length} {plural(f.offers.length)}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 sm:ml-auto">
+                  <div className="text-right">
+                    <div className="font-mono text-xl font-semibold text-lime">
+                      {currency.format(f.bestPrice)} ₴
+                    </div>
+                    <div className="text-[11px] uppercase tracking-wide text-muted">
+                      {best?.shopName ?? "—"}
+                    </div>
+                  </div>
+                  <span
+                    className={`font-display text-2xl text-muted transition-transform ${isOpen ? "rotate-45" : ""}`}
+                  >
+                    +
+                  </span>
+                </div>
+              </button>
+
+              {isOpen && (
+                <div className="border-t border-line bg-ink/40 p-4 sm:p-5">
+                  <div className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
+                    <div className="flex flex-col gap-2">
+                      {f.offers.map((o) => (
+                        <div
+                          key={o.id}
+                          className="flex items-center gap-3 rounded-md border border-line bg-surface px-3 py-2"
+                        >
+                          <div className="w-28 shrink-0 truncate font-display text-sm uppercase text-paper-dim">
+                            {o.shopName}
+                          </div>
+                          <div className="font-mono text-sm font-semibold text-paper">
+                            {currency.format(o.price)} ₴
+                          </div>
+                          {o.oldPrice && o.discountPct ? (
+                            <span className="font-mono text-xs text-muted line-through">
+                              {currency.format(o.oldPrice)} ₴
+                            </span>
+                          ) : null}
+                          {o.discountPct ? (
+                            <span className="rounded bg-danger/15 px-1.5 py-0.5 font-mono text-[11px] text-danger">
+                              -{o.discountPct}%
+                            </span>
+                          ) : null}
+                          {!o.inStock && (
+                            <span className="rounded bg-line px-1.5 py-0.5 font-mono text-[11px] text-muted">
+                              немає в наявності
+                            </span>
+                          )}
+                          <a
+                            href={o.productUrl}
+                            target="_blank"
+                            rel="noopener noreferrer nofollow"
+                            className="ml-auto shrink-0 rounded-md border border-line px-3 py-1 text-xs uppercase tracking-wide text-teal transition hover:border-teal"
+                          >
+                            До магазину →
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex flex-col gap-2 rounded-md border border-line bg-surface p-3">
+                      <div className="text-[11px] uppercase tracking-wider text-muted">
+                        Історія ціни (найдешевша пропозиція)
+                      </div>
+                      <PriceHistoryChart history={best?.history ?? []} />
+                      <SubscribeModal
+                        filamentId={f.id}
+                        label={`${f.brand} ${f.material} · ${f.color}`}
+                        trigger={
+                          <span className="mt-1 inline-flex w-full items-center justify-center rounded-md bg-accent px-3 py-2 font-display text-sm uppercase tracking-wide text-ink transition hover:brightness-110">
+                            🔔 Стежити за ціною
+                          </span>
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function plural(n: number) {
+  if (n === 1) return "магазин";
+  if (n >= 2 && n <= 4) return "магазини";
+  return "магазинів";
+}
+
+function Select({
+  label,
+  value,
+  onChange,
+  options,
+  optionLabels,
+  allLabel,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: string[];
+  optionLabels?: Record<string, string>;
+  allLabel: string;
+}) {
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="text-[11px] uppercase tracking-wider text-muted">{label}</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="rounded-md border border-line bg-ink px-3 py-2 text-sm text-paper outline-none focus:border-accent"
+      >
+        {options.map((o) => (
+          <option key={o} value={o}>
+            {o === "all" ? allLabel : optionLabels?.[o] ?? o}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function Toggle({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  label: string;
+}) {
+  return (
+    <label className="flex cursor-pointer items-center gap-2 text-sm text-paper-dim">
+      <span
+        onClick={() => onChange(!checked)}
+        className={`relative h-5 w-9 rounded-full transition ${checked ? "bg-accent" : "bg-line"}`}
+      >
+        <span
+          className={`absolute top-0.5 h-4 w-4 rounded-full bg-paper transition-transform ${checked ? "translate-x-4" : "translate-x-0.5"}`}
+        />
+      </span>
+      {label}
+    </label>
+  );
+}
