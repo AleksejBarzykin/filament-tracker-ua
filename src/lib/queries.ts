@@ -26,6 +26,23 @@ export type BoardFilament = {
   offers: BoardOffer[];
 };
 
+/**
+ * Товари, які магазин кладе в ту саму категорію, що й філамент, і в назві яких
+ * згадується сумісний матеріал ("клей для PLA/PETG", "спрей для 3D-друку") —
+ * через ту згадку вони проходять перевірку матеріалу, але філаментом не є.
+ * Сюди ж — прутки для 3D-ручок (не котушка для принтера) і порожні шпулі.
+ */
+const NOT_FILAMENT =
+  /кле[йюя]|glue|спрей|spray|адгез|3d[-\s]?ручк|ручк[иа]\b|шпул|сопл|nozzle|термопаст|фільтр|очищ|аркуш/i;
+
+/**
+ * Мінімальна правдоподібна ціна котушки філаменту. Поодинокі картки
+ * (напр. ArtLine з ціною 1 ₴) — це не пропозиція, а заглушка на сторінці
+ * товару, якого зараз немає в продажу; у сортуванні "дешевші спочатку"
+ * така картка стає першою й обіцяє ціну, якої не існує.
+ */
+const MIN_PLAUSIBLE_PRICE = 50;
+
 export async function getBoard(): Promise<BoardFilament[]> {
   const filaments = await prisma.filament.findMany({
     // Категорії деяких магазинів (особливо Rozetka/OLX) — це "витратні
@@ -57,9 +74,10 @@ export async function getBoard(): Promise<BoardFilament[]> {
   });
 
   const board: BoardFilament[] = filaments
-    .filter((f) => f.listings.length > 0)
+    .filter((f) => f.listings.length > 0 && !NOT_FILAMENT.test(f.color))
     .map((f) => {
       const offers: BoardOffer[] = f.listings
+        .filter((l) => l.currentPrice >= MIN_PLAUSIBLE_PRICE)
         .map((l) => ({
           id: l.id,
           shopSlug: l.shop.slug,
@@ -93,6 +111,9 @@ export async function getBoard(): Promise<BoardFilament[]> {
         offers,
       };
     })
+    // Позиція, у якої після відсіву неправдоподібних цін не лишилось жодної
+    // пропозиції, показувати нема з чим.
+    .filter((f) => f.offers.length > 0)
     .sort((a, b) => a.bestPrice - b.bestPrice);
 
   return board;

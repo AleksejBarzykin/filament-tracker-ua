@@ -36,49 +36,14 @@ type SeedFilament = {
 };
 
 /**
- * Реальні (перевірені через веб-пошук) сторінки магазинів — використовуються
- * як посилання "До магазину", коли для конкретної пропозиції не задано
- * точний `url` товару. Це демо-дані (ціни синтетичні), але посилання ведуть
- * на справжні існуючі сторінки замість вигаданого `/product/demo-...`.
+ * Посилання "До магазину" мусить вести на конкретний товар. Раніше тут був
+ * фолбек на сторінку категорії (унікалізовану якорем #<id>) — але для
+ * користувача це виглядало як реальна пропозиція за вказаною ціною, хоча на
+ * тій сторінці такої ціни немає. Тому пропозиції без точного `url` тепер
+ * просто не потрапляють у БД.
  */
-const SHOP_FALLBACK_URL: Record<ShopSlug, string> = {
-  plexiwire: "https://shop.plexiwire.com.ua/pla-filament/",
-  "3dplastic": "https://www.3dplastic.com.ua/",
-  "filament-shop": "https://filament-shop.in.ua/",
-  ukr3d: "https://ukr3d.com.ua/",
-  artline: "https://artline.ua/catalog/filamenty-i-smoly/",
-  brain: "https://brain.com.ua/category/Rashodniki_k_3D_pechati-c1804/filter=a1804-684/",
-  rozetka: "https://rozetka.com.ua/ua/rashodnie-materiali-dlya-3d-printerov/c4671751/",
-  olx: "https://www.olx.ua/uk/elektronika/kompyutery-i-komplektuyuschie/q-%D0%BF%D0%BB%D0%B0%D1%81%D1%82%D0%B8%D0%BA-%D0%B4%D0%BB%D1%8F-3%D0%B4-%D0%BF%D1%80%D0%B8%D0%BD%D1%82%D0%B5%D1%80%D0%B0/",
-};
-
-/** Реальні категорійні сторінки для конкретного магазину+матеріалу, точніші за загальний fallback. */
-const SHOP_MATERIAL_URL: Partial<Record<ShopSlug, Partial<Record<string, string>>>> = {
-  plexiwire: {
-    PLA: "https://shop.plexiwire.com.ua/pla-filament/",
-    PETG: "https://shop.plexiwire.com.ua/petg-filament/",
-    ABS: "https://shop.plexiwire.com.ua/abs-filament/",
-    ASA: "https://shop.plexiwire.com.ua/asa-filament/",
-  },
-  ukr3d: {
-    PLA: "https://ukr3d.com.ua/ua/g145708343-pla-plastik-dlya",
-    PETG: "https://ukr3d.com.ua/g145752746-plastik-petg/",
-  },
-  rozetka: {
-    PLA: "https://rozetka.com.ua/ua/rashodnie-materiali-dlya-3d-printerov/c4671751/vid-plastika-dlya-3d-printera=pla/",
-    PETG: "https://rozetka.com.ua/ua/rashodnie-materiali-dlya-3d-printerov/c4671751/vid-plastika-dlya-3d-printera=copet-petg/",
-    ASA: "https://rozetka.com.ua/rashodnie-materiali-dlya-3d-printerov/c4671751/vid-plastika-dlya-3d-printera=asa/",
-    TPU: "https://rozetka.com.ua/ua/rashodnie-materiali-dlya-3d-printerov/c4671751/vid-plastika-dlya-3d-printera=tpu/",
-  },
-};
-
-function resolveProductUrl(shop: ShopSlug, material: string, filamentId: string, explicitUrl?: string): string {
-  if (explicitUrl) return explicitUrl;
-  const fallback = SHOP_MATERIAL_URL[shop]?.[material] ?? SHOP_FALLBACK_URL[shop];
-  // Кілька демо-позицій одного магазину можуть ділити той самий fallback URL
-  // категорії — унікалізуємо якорем (#), який не змінює сторінку, на яку
-  // веде посилання, але зберігає unique(shopId, productUrl) у БД.
-  return `${fallback}#${filamentId}`;
+function resolveProductUrl(explicitUrl?: string): string | null {
+  return explicitUrl ?? null;
 }
 
 const filaments: SeedFilament[] = [
@@ -317,15 +282,15 @@ async function main() {
 
     for (const offer of f.offers) {
       const shopId = shopIdBySlug.get(offer.shop)!;
-      const productUrl = resolveProductUrl(offer.shop, f.material, filament.id, offer.url);
+      const productUrl = resolveProductUrl(offer.url);
+      if (!productUrl) continue;
       const discountPct =
         offer.oldPrice && offer.oldPrice > offer.price
           ? Math.round(((offer.oldPrice - offer.price) / offer.oldPrice) * 100)
           : null;
 
-      // Кілька демо-позицій одного магазину можуть ділити той самий
-      // fallback URL категорії (коли для товару не задано точний `url`) —
-      // upsert замість create, щоб не впасти на unique(shopId, productUrl).
+      // upsert замість create, щоб не впасти на unique(shopId, productUrl),
+      // якщо той самий товар зустрінеться в демо-наборі двічі.
       const listing = await prisma.listing.upsert({
         where: { shopId_productUrl: { shopId, productUrl } },
         update: {
