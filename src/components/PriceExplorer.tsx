@@ -81,8 +81,11 @@ export default function PriceExplorer({ board }: { board: BoardFilament[] }) {
 
   function toggleRow(id: string) {
     if (expanded === id) {
+      // `settled` навмисно не чіпаємо: якщо прибрати графік на старті
+      // згортання, вміст панелі перекомпонується просто під час руху і
+      // кнопка "Стежити за ціною" стрибає вгору. Скидаємо його вже при
+      // наступному відкритті.
       setExpanded(null); // Collapsible зніме панель, коли схлопне її
-      setSettled(false); // прибрати графік ще до згортання, щоб не перемальовувати його щокадру
       return;
     }
     setMounted(id);

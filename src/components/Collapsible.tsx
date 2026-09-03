@@ -55,15 +55,21 @@ export default function Collapsible({
       {
         duration: reduce ? 0 : open ? 190 : 140,
         easing: open ? "cubic-bezier(0.2, 0.9, 0.3, 1)" : "cubic-bezier(0.4, 0, 1, 1)",
+        // Розкриття — без fill: елемент повертається до власного height: auto
+        // і далі вільно підлаштовується під вміст. Згортання — навпаки, з
+        // fill: інакше на останньому кадрі анімація віддає керування назад, і
+        // блок встигає моргнути на повну висоту, поки батько його зніме.
+        fill: open ? "none" : "forwards",
       }
     );
     running.current = animation;
     animation.onfinish = () => {
-      running.current = null;
-      // Без fill елемент повертається до власних стилів (height: auto), тож
-      // розкритий блок далі вільно підлаштовується під вміст.
-      if (open) opened.current?.();
-      else closed.current?.();
+      if (open) {
+        running.current = null;
+        opened.current?.();
+      } else {
+        closed.current?.();
+      }
     };
 
     return () => {
