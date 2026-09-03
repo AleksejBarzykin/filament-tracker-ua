@@ -117,8 +117,13 @@ export const shopAdapters: ShopAdapter[] = [
     // `page=N/` до відфільтрованого URL дає 404 — переходимо одразу на
     // канонічний шлях, де пагінація підтверджено працює.
     paginate: (base, page) => (page <= 1 ? base : `${base.replace(/\/$/, "")}/page=${page}/`),
+    // Категорія на сайті — 660+ товарів (без фільтра за матеріалом), а на
+    // ліміті maxPages: 10 остання сторінка все ще поверталась повною —
+    // тобто каталог обрізався задовго до кінця. Цикл у run.ts і так
+    // зупиняється сам, щойно сторінка повертає 0 позицій, тож зайвий запас
+    // тут безкоштовний.
     categories: [
-      { url: "https://brain.com.ua/ukr/category/Plastik_dlya_3D-printeriv-c684/", maxPages: 10 },
+      { url: "https://brain.com.ua/ukr/category/Plastik_dlya_3D-printeriv-c684/", maxPages: 40 },
     ],
   }),
   // Те саме для Rozetka — HTTP 403 на простий fetch.
