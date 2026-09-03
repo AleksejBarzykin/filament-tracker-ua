@@ -68,6 +68,20 @@ export default function PriceExplorer({ board }: { board: BoardFilament[] }) {
   const [onlyInStock, setOnlyInStock] = useState(true);
   const [sort, setSort] = useState<SortKey>("price-asc");
   const [expanded, setExpanded] = useState<string | null>(null);
+  // Панель історії лишається в DOM ще й на час анімації згортання — інакше
+  // вона зникала б миттєво, без зворотного переходу. `mounted` тримає id
+  // рядка, чия панель зараз відрендерена (максимум один: тримати графік
+  // Recharts для всіх ~1800 позицій одразу було б задорого).
+  const [mounted, setMounted] = useState<string | null>(null);
+
+  function toggleRow(id: string) {
+    if (expanded === id) {
+      setExpanded(null); // сам елемент зніме onAnimationEnd, коли схлопнеться
+      return;
+    }
+    setMounted(id);
+    setExpanded(id);
+  }
 
   const filtered = useMemo(() => {
     let rows = board.filter((f) => {
@@ -168,6 +182,7 @@ export default function PriceExplorer({ board }: { board: BoardFilament[] }) {
 
         {filtered.map((f, i) => {
           const isOpen = expanded === f.id;
+          const isMounted = mounted === f.id;
           const best = f.offers.find((o) => o.inStock) ?? f.offers[0];
 
           return (
@@ -178,7 +193,7 @@ export default function PriceExplorer({ board }: { board: BoardFilament[] }) {
             >
               <button
                 type="button"
-                onClick={() => setExpanded(isOpen ? null : f.id)}
+                onClick={() => toggleRow(f.id)}
                 className="flex w-full flex-wrap items-center gap-4 p-4 text-left transition hover:bg-surface-2 sm:flex-nowrap"
               >
                 <Swatch imageUrl={f.imageUrl} color={f.color} />
@@ -220,62 +235,71 @@ export default function PriceExplorer({ board }: { board: BoardFilament[] }) {
                 </div>
               </button>
 
-              {isOpen && (
-                <div className="border-t border-line bg-ink/40 p-4 sm:p-5">
-                  <div className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
-                    <div className="flex flex-col gap-2">
-                      {f.offers.map((o) => (
-                        <div
-                          key={o.id}
-                          className="flex items-center gap-3 rounded-md border border-line bg-surface px-3 py-2"
-                        >
-                          <div className="w-28 shrink-0 truncate font-display text-sm uppercase text-paper-dim">
-                            {o.shopName}
-                          </div>
-                          <div className="font-mono text-sm font-semibold text-paper">
-                            {currency.format(o.price)} ₴
-                          </div>
-                          {o.oldPrice && o.discountPct ? (
-                            <span className="font-mono text-xs text-muted line-through">
-                              {currency.format(o.oldPrice)} ₴
-                            </span>
-                          ) : null}
-                          {o.discountPct ? (
-                            <span className="rounded bg-danger/15 px-1.5 py-0.5 font-mono text-[11px] text-danger">
-                              -{o.discountPct}%
-                            </span>
-                          ) : null}
-                          {!o.inStock && (
-                            <span className="rounded bg-line px-1.5 py-0.5 font-mono text-[11px] text-muted">
-                              немає в наявності
-                            </span>
-                          )}
-                          <a
-                            href={o.productUrl}
-                            target="_blank"
-                            rel="noopener noreferrer nofollow"
-                            className="ml-auto shrink-0 rounded-md border border-line px-3 py-1 text-xs uppercase tracking-wide text-teal transition hover:border-teal"
-                          >
-                            До магазину →
-                          </a>
+              {isMounted && (
+                <div
+                  className={`collapsible ${isOpen ? "" : "is-closing"}`}
+                  onAnimationEnd={() => {
+                    if (!isOpen) setMounted(null);
+                  }}
+                >
+                  <div className="min-h-0 overflow-hidden">
+                    <div className="border-t border-line bg-ink/40 p-4 sm:p-5">
+                      <div className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
+                        <div className="flex flex-col gap-2">
+                          {f.offers.map((o) => (
+                            <div
+                              key={o.id}
+                              className="flex items-center gap-3 rounded-md border border-line bg-surface px-3 py-2"
+                            >
+                              <div className="w-28 shrink-0 truncate font-display text-sm uppercase text-paper-dim">
+                                {o.shopName}
+                              </div>
+                              <div className="font-mono text-sm font-semibold text-paper">
+                                {currency.format(o.price)} ₴
+                              </div>
+                              {o.oldPrice && o.discountPct ? (
+                                <span className="font-mono text-xs text-muted line-through">
+                                  {currency.format(o.oldPrice)} ₴
+                                </span>
+                              ) : null}
+                              {o.discountPct ? (
+                                <span className="rounded bg-danger/15 px-1.5 py-0.5 font-mono text-[11px] text-danger">
+                                  -{o.discountPct}%
+                                </span>
+                              ) : null}
+                              {!o.inStock && (
+                                <span className="rounded bg-line px-1.5 py-0.5 font-mono text-[11px] text-muted">
+                                  немає в наявності
+                                </span>
+                              )}
+                              <a
+                                href={o.productUrl}
+                                target="_blank"
+                                rel="noopener noreferrer nofollow"
+                                className="ml-auto shrink-0 rounded-md border border-line px-3 py-1 text-xs uppercase tracking-wide text-teal transition hover:border-teal"
+                              >
+                                До магазину →
+                              </a>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
 
-                    <div className="flex flex-col gap-2 rounded-md border border-line bg-surface p-3">
-                      <div className="text-[11px] uppercase tracking-wider text-muted">
-                        Історія ціни (найдешевша пропозиція)
+                        <div className="flex flex-col gap-2 rounded-md border border-line bg-surface p-3">
+                          <div className="text-[11px] uppercase tracking-wider text-muted">
+                            Історія ціни (найдешевша пропозиція)
+                          </div>
+                          <PriceHistoryChart history={best?.history ?? []} />
+                          <SubscribeModal
+                            filamentId={f.id}
+                            label={`${f.brand} ${f.material} · ${f.color}`}
+                            trigger={
+                              <span className="mt-1 inline-flex w-full items-center justify-center rounded-md bg-accent px-3 py-2 font-display text-sm uppercase tracking-wide text-ink transition hover:brightness-110">
+                                🔔 Стежити за ціною
+                              </span>
+                            }
+                          />
+                        </div>
                       </div>
-                      <PriceHistoryChart history={best?.history ?? []} />
-                      <SubscribeModal
-                        filamentId={f.id}
-                        label={`${f.brand} ${f.material} · ${f.color}`}
-                        trigger={
-                          <span className="mt-1 inline-flex w-full items-center justify-center rounded-md bg-accent px-3 py-2 font-display text-sm uppercase tracking-wide text-ink transition hover:brightness-110">
-                            🔔 Стежити за ціною
-                          </span>
-                        }
-                      />
                     </div>
                   </div>
                 </div>
