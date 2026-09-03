@@ -124,54 +124,16 @@ body {
   animation: rise-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-/* Плавне розкриття панелі з історією ціни. Анімувати height не можна —
-   висота панелі залежить від кількості пропозицій і невідома наперед, а
-   `height: auto` не інтерполюється. Grid-рядок 0fr -> 1fr дає той самий
-   ефект для будь-якого контенту: сам рядок стискається до нуля, а внутрішній
-   контейнер (min-h-0 overflow-hidden) обрізає вміст, зберігаючи його
-   природний розмір.
-
-   Саме @keyframes, а не transition: панель вставляється в DOM уже
-   розкритою, і для transition не було б початкового кадру, від якого
-   анімувати (розкриття виходило б миттєвим). Анімація ж програється з
-   власного 0%-кадру одразу після вставки. */
-@keyframes collapsible-open {
-  from {
-    grid-template-rows: 0fr;
-    opacity: 0;
-  }
-  to {
-    grid-template-rows: 1fr;
-    opacity: 1;
-  }
-}
-
-@keyframes collapsible-close {
-  from {
-    grid-template-rows: 1fr;
-    opacity: 1;
-  }
-  to {
-    grid-template-rows: 0fr;
-    opacity: 0;
-  }
-}
-
-.collapsible {
-  display: grid;
-  grid-template-rows: 1fr;
-  animation: collapsible-open 0.32s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.collapsible.is-closing {
-  animation: collapsible-close 0.26s cubic-bezier(0.4, 0, 1, 1) forwards;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .collapsible,
-  .collapsible.is-closing {
-    animation-duration: 0.01ms;
-  }
+/* На дошці ~1800 карток, і будь-яка зміна висоти (розкриття панелі з
+   історією ціни) змушувала браузер перераховувати розкладку та перемальовувати
+   їх усі — заміряно 1.94 мс на кожен кадр анімації, звідси й ривки.
+   content-visibility дозволяє пропускати вміст карток за межами екрана
+   (той самий замір після цього — 0 мс), а contain-intrinsic-size тримає
+   правильну висоту скролбара: `auto` запам'ятовує реальний розмір картки
+   після першого показу, 84px — оцінка для ще не показаних. */
+.row-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 84px;
 }
 
 input[type="range"] {

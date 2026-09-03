@@ -6,6 +6,7 @@ import { colorToHex } from "@/lib/colors";
 import PriceHistoryChart from "./PriceHistoryChart";
 import SubscribeModal from "./SubscribeModal";
 import MultiSelect from "./MultiSelect";
+import Collapsible from "./Collapsible";
 
 type SortKey = "price-asc" | "price-desc" | "brand";
 
@@ -73,14 +74,20 @@ export default function PriceExplorer({ board }: { board: BoardFilament[] }) {
   // рядка, чия панель зараз відрендерена (максимум один: тримати графік
   // Recharts для всіх ~1800 позицій одразу було б задорого).
   const [mounted, setMounted] = useState<string | null>(null);
+  // Графік Recharts перемальовується на кожну зміну розміру контейнера, тож
+  // під час анімації він з'їдав би кадри. Показуємо його аж коли панель
+  // розкрилася — до того місце під нього просто зарезервоване.
+  const [settled, setSettled] = useState(false);
 
   function toggleRow(id: string) {
     if (expanded === id) {
-      setExpanded(null); // сам елемент зніме onAnimationEnd, коли схлопнеться
+      setExpanded(null); // Collapsible зніме панель, коли схлопне її
+      setSettled(false); // прибрати графік ще до згортання, щоб не перемальовувати його щокадру
       return;
     }
     setMounted(id);
     setExpanded(id);
+    setSettled(false);
   }
 
   const filtered = useMemo(() => {
@@ -188,7 +195,7 @@ export default function PriceExplorer({ board }: { board: BoardFilament[] }) {
           return (
             <div
               key={f.id}
-              className="rise-in overflow-hidden rounded-[var(--radius)] border border-line bg-surface"
+              className="row-card rise-in overflow-hidden rounded-[var(--radius)] border border-line bg-surface"
               style={{ animationDelay: `${Math.min(i, 8) * 35}ms` }}
             >
               <button
@@ -236,13 +243,12 @@ export default function PriceExplorer({ board }: { board: BoardFilament[] }) {
               </button>
 
               {isMounted && (
-                <div
-                  className={`collapsible ${isOpen ? "" : "is-closing"}`}
-                  onAnimationEnd={() => {
-                    if (!isOpen) setMounted(null);
-                  }}
+                <Collapsible
+                  open={isOpen}
+                  onOpened={() => setSettled(true)}
+                  onClosed={() => setMounted(null)}
                 >
-                  <div className="min-h-0 overflow-hidden">
+                  <div>
                     <div className="border-t border-line bg-ink/40 p-4 sm:p-5">
                       <div className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
                         <div className="flex flex-col gap-2">
@@ -288,7 +294,11 @@ export default function PriceExplorer({ board }: { board: BoardFilament[] }) {
                           <div className="text-[11px] uppercase tracking-wider text-muted">
                             Історія ціни (найдешевша пропозиція)
                           </div>
-                          <PriceHistoryChart history={best?.history ?? []} />
+                          {settled ? (
+                        <PriceHistoryChart history={best?.history ?? []} />
+                      ) : (
+                        <div className="h-28" />
+                      )}
                           <SubscribeModal
                             filamentId={f.id}
                             label={`${f.brand} ${f.material} · ${f.color}`}
@@ -302,7 +312,7 @@ export default function PriceExplorer({ board }: { board: BoardFilament[] }) {
                       </div>
                     </div>
                   </div>
-                </div>
+                </Collapsible>
               )}
             </div>
           );
