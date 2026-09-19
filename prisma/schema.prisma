@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Интернет-магазин, у которого мы отслеживаем цены
+model Shop {
+  id            String    @id @default(cuid())
+  slug          String    @unique
+  name          String
+  url           String
+  logoUrl       String?
+  deliveryKyiv  Boolean   @default(true)
+  deliveryUa    Boolean   @default(true)
+  scraperKey    String    // ключ адаптера в scripts/scrapers
+  lastScrapedAt DateTime?
+  listings      Listing[]
+
+  @@map("shops")
+}
+
+// Значения material: PLA, PETG, ABS, ASA, TPU, NYLON, PC, RESIN, OTHER
+// (SQLite не поддерживает enum на уровне схемы, валидируем в коде — см. src/lib/materials.ts)
+
+// Конкретная позиция филамента (бренд+материал+цвет+диаметр+вес),
+// объединяющая предложения разных магазинов
+model Filament {
+  id         String    @id @default(cuid())
+  brand      String
+  material   String
+  color      String
+  diameterMm Float     @default(1.75)
+  weightG    Int       @default(1000)
+  imageUrl   String?
+  createdAt  DateTime  @default(now())
+  listings   Listing[]
+
+  @@index([brand, material, color])
+  @@map("filaments")
+}
+
+// Предложение конкретного магазина по конкретной позиции филамента
+model Listing {
+  id           String        @id @default(cuid())
+  shop         Shop          @relation(fields: [shopId], references: [id])
+  shopId       String
+  filament     Filament      @relation(fields: [filamentId], references: [id])
+  filamentId   String
+  productUrl   String
+  currentPrice Float
+  oldPrice     Float?
+  currency     String        @default("UAH")
+  inStock      Boolean       @default(true)
+  discountPct  Int?
+  updatedAt    DateTime      @updatedAt
+  createdAt    DateTime      @default(now())
+  priceHistory PriceHistory[]
+
+  @@unique([shopId, productUrl])
+  @@index([filamentId])
+  @@map("listings")
+}
+
+// Точка истории цены для графика
+model PriceHistory {
+  id        String   @id @default(cuid())
+  listing   Listing  @relation(fields: [listingId], references: [id])
+  listingId String
+  price     Float
+  inStock   Boolean  @default(true)
+  scrapedAt DateTime @default(now())
+
+  @@index([listingId, scrapedAt])
+  @@map("price_history")
+}
+
+// Подписка пользователя на уведомление о снижении цены
+model Subscription {
+  id            String    @id @default(cuid())
+  email         String
+  filamentId    String?
+  targetPrice   Float?
+  notifyAnySale Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  notifiedAt    DateTime?
+
+  @@index([filamentId])
+  @@map("subscriptions")
+}
