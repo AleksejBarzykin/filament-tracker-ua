@@ -12,6 +12,16 @@ type SortKey = "price-asc" | "price-desc" | "brand";
 
 const currency = new Intl.NumberFormat("uk-UA", { maximumFractionDigits: 0 });
 
+// Тільки стандартні розміри котушки, і лише ті, що реально трапляються в
+// даних — решта ваг (500г, 3кг, 5кг тощо) залишається доступною через "Усі",
+// просто не засмічує список чекбоксів.
+const WEIGHT_OPTIONS: { value: string; label: string }[] = [
+  { value: "1000", label: "1 кг (1000 г)" },
+  { value: "850", label: "0,85 кг (850 г)" },
+  { value: "750", label: "0,75 кг (750 г)" },
+  { value: "250", label: "0,25 кг (250 г)" },
+];
+
 /** Фото котушки з магазину, якщо є — з фолбеком на кольоровий кружок при
  * відсутньому фото або помилці завантаження (хотлінк-захист тощо). */
 function Swatch({ imageUrl, color }: { imageUrl: string | null; color: string }) {
@@ -55,6 +65,14 @@ export default function PriceExplorer({ board }: { board: BoardFilament[] }) {
     [board]
   );
   const shopOptionLabels = useMemo(() => Object.fromEntries(shopOptions), [shopOptions]);
+  const weightOptions = useMemo(() => {
+    const present = new Set(board.map((f) => String(f.weightG)));
+    return WEIGHT_OPTIONS.filter((o) => present.has(o.value)).map((o) => o.value);
+  }, [board]);
+  const weightOptionLabels = useMemo(
+    () => Object.fromEntries(WEIGHT_OPTIONS.map((o) => [o.value, o.label])),
+    []
+  );
   const maxPriceAll = useMemo(
     () => Math.max(1000, ...board.map((f) => f.bestPrice)),
     [board]
@@ -64,6 +82,7 @@ export default function PriceExplorer({ board }: { board: BoardFilament[] }) {
   const [materials, setMaterials] = useState<string[]>([]);
   const [brands, setBrands] = useState<string[]>([]);
   const [shops, setShops] = useState<string[]>([]);
+  const [weights, setWeights] = useState<string[]>(["1000"]);
   const [maxPrice, setMaxPrice] = useState<number>(0); // 0 = без обмеження
   const [onlySale, setOnlySale] = useState(false);
   const [onlyInStock, setOnlyInStock] = useState(true);
@@ -98,6 +117,7 @@ export default function PriceExplorer({ board }: { board: BoardFilament[] }) {
       if (materials.length > 0 && !materials.includes(f.material)) return false;
       if (brands.length > 0 && !brands.includes(f.brand)) return false;
       if (shops.length > 0 && !f.offers.some((o) => shops.includes(o.shopSlug))) return false;
+      if (weights.length > 0 && !weights.includes(String(f.weightG))) return false;
       if (onlySale && !f.onSale) return false;
       if (onlyInStock && !f.offers.some((o) => o.inStock)) return false;
       if (maxPrice > 0 && f.bestPrice > maxPrice) return false;
@@ -116,13 +136,13 @@ export default function PriceExplorer({ board }: { board: BoardFilament[] }) {
     });
 
     return rows;
-  }, [board, materials, brands, shops, onlySale, onlyInStock, maxPrice, query, sort]);
+  }, [board, materials, brands, shops, weights, onlySale, onlyInStock, maxPrice, query, sort]);
 
   return (
     <div className="flex flex-col gap-6">
       {/* Панель фільтрів */}
       <div className="rise-in relative z-10 rounded-[var(--radius)] border border-line bg-surface p-4 sm:p-5">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-7">
           <label className="flex flex-col gap-1 lg:col-span-2">
             <span className="text-[11px] uppercase tracking-wider text-muted">Пошук</span>
             <input
@@ -141,6 +161,13 @@ export default function PriceExplorer({ board }: { board: BoardFilament[] }) {
             optionLabels={shopOptionLabels}
             selected={shops}
             onChange={setShops}
+          />
+          <MultiSelect
+            label="Вага"
+            options={weightOptions}
+            optionLabels={weightOptionLabels}
+            selected={weights}
+            onChange={setWeights}
           />
 
           <label className="flex flex-col gap-1">
