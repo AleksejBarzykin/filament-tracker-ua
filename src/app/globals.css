@@ -1,0 +1,153 @@
+@import "tailwindcss";
+
+:root {
+  --ink: #0f0d0a;
+  --ink-2: #17130f;
+  --surface: #1c1712;
+  --surface-2: #241d16;
+  --line: #3a2f24;
+  --paper: #f4ead9;
+  --paper-dim: #cdbfa8;
+  --muted: #9a8b76;
+
+  --accent: #ff6a1a; /* гарячий екструдер */
+  --accent-2: #ffb84d;
+  --teal: #2fd0c8; /* PETG-котушка */
+  --lime: #b7ff4d;
+  --danger: #ff4d5e;
+
+  --radius: 10px;
+}
+
+@theme inline {
+  --color-ink: var(--ink);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-paper: var(--paper);
+  --color-paper-dim: var(--paper-dim);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-2: var(--accent-2);
+  --color-teal: var(--teal);
+  --color-lime: var(--lime);
+  --color-danger: var(--danger);
+  --font-display: var(--font-display);
+  --font-mono: var(--font-mono);
+  --font-body: var(--font-body);
+}
+
+* {
+  border-color: var(--line);
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background:
+    radial-gradient(1200px 600px at 12% -10%, rgba(255, 106, 26, 0.16), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, rgba(47, 208, 200, 0.1), transparent 55%),
+    repeating-linear-gradient(
+      0deg,
+      rgba(244, 234, 217, 0.035) 0px,
+      rgba(244, 234, 217, 0.035) 1px,
+      transparent 1px,
+      transparent 40px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(244, 234, 217, 0.035) 0px,
+      rgba(244, 234, 217, 0.035) 1px,
+      transparent 1px,
+      transparent 40px
+    ),
+    var(--ink);
+  color: var(--paper);
+  font-family: var(--font-body), system-ui, sans-serif;
+}
+
+.font-display {
+  font-family: var(--font-display), sans-serif;
+  letter-spacing: 0.01em;
+}
+
+.font-mono {
+  font-family: var(--font-mono), monospace;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--ink);
+}
+
+.spool-swatch {
+  box-shadow:
+    inset 0 0 0 2px rgba(15, 13, 10, 0.55),
+    inset 0 -6px 10px rgba(0, 0, 0, 0.35),
+    inset 0 4px 6px rgba(255, 255, 255, 0.2);
+}
+
+.hazard-edge {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--accent),
+    var(--accent) 10px,
+    var(--ink-2) 10px,
+    var(--ink-2) 20px
+  );
+}
+
+@keyframes spin-slow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spin-slow {
+  animation: spin-slow 7s linear infinite;
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.rise-in {
+  animation: rise-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* На дошці ~1800 карток, і будь-яка зміна висоти (розкриття панелі з
+   історією ціни) змушувала браузер перераховувати розкладку та перемальовувати
+   їх усі — заміряно 1.94 мс на кожен кадр анімації, звідси й ривки.
+   content-visibility дозволяє пропускати вміст карток за межами екрана
+   (той самий замір після цього — 0 мс), а contain-intrinsic-size тримає
+   правильну висоту скролбара: `auto` запам'ятовує реальний розмір картки
+   після першого показу, 84px — оцінка для ще не показаних. */
+.row-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 84px;
+}
+
+input[type="range"] {
+  accent-color: var(--accent);
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 8px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}

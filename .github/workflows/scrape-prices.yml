@@ -1,0 +1,49 @@
+name: Scrape filament prices
+
+on:
+  schedule:
+    # каждый день в 06:00 Киева (UTC+2/+3) — 04:00 UTC
+    - cron: "0 4 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    env:
+      # Prisma's SQLite connector resolves a relative `file:` URL against the
+      # schema.prisma directory (prisma/), not the process cwd — so this must
+      # be "./dev.db", not "./prisma/dev.db", or every write silently lands
+      # in a throwaway prisma/prisma/dev.db that never gets committed.
+      DATABASE_URL: "file:./dev.db"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+
+      - run: npm ci
+
+      - name: Install Playwright Chromium (для Brain/Rozetka, блокують простий fetch)
+        run: npx playwright install --with-deps chromium
+
+      - name: Apply schema
+        run: npx prisma db push
+
+      - name: Run scrapers
+        run: npm run scrape
+
+      - name: Check price-drop subscriptions
+        run: npm run check-notifications
+
+      - name: Commit updated data
+        run: |
+          git config user.name "filament-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add prisma/dev.db
+          git diff --cached --quiet || git commit -m "chore: update scraped filament prices"
+          git push
